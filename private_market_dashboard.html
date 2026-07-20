@@ -3,237 +3,107 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Private-Market Return Replication — Alex Runcianu</title>
+<title>Replicating a Private Return Stream — Alex Runcianu</title>
 <style>
   :root{
-    --navy:      #0e2238;
-    --navy-2:    #16324f;
-    --navy-3:    #24466b;
-    --ink:       #1d2833;
-    --grey-6:    #46525e;
-    --grey-4:    #7b8794;
-    --grey-3:    #aab4be;
-    --grey-2:    #d9dee3;
-    --grey-1:    #eef0f3;
-    --paper:     #f7f8fa;
-    --white:     #ffffff;
-    --accent:    #b08d3e;   /* single restrained gold accent */
+    --navy:    #0e2238;
+    --navy-2:  #16324f;
+    --navy-3:  #24466b;
+    --ink:     #1d2833;
+    --grey-6:  #46525e;
+    --grey-4:  #7b8794;
+    --grey-3:  #aab4be;
+    --grey-2:  #d9dee3;
+    --grey-1:  #eef0f3;
+    --paper:   #f7f8fa;
+    --white:   #ffffff;
+    --accent:  #b08d3e;
     --accent-soft: #f3ecdc;
-    --good:      #2e6e4e;
-    --warn:      #8a5a2a;
+    --good:    #2e6e4e;
   }
   *{ box-sizing:border-box; margin:0; padding:0; }
-  html{ scroll-behavior:smooth; }
   body{
     font-family: "Helvetica Neue", Helvetica, Arial, -apple-system, "Segoe UI", sans-serif;
-    background: var(--paper);
-    color: var(--ink);
-    font-size: 15px;
-    line-height: 1.55;
-    -webkit-font-smoothing: antialiased;
+    background: var(--paper); color: var(--ink);
+    font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased;
   }
   ::selection{ background: var(--accent-soft); }
 
   /* ---------- header ---------- */
   header{
     background: linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 100%);
-    color: var(--white);
-    padding: 34px 28px 26px;
+    color: var(--white); padding: 38px 28px 30px;
     border-bottom: 3px solid var(--accent);
   }
-  .header-inner{ max-width: 1140px; margin: 0 auto; }
+  .shell{ max-width: 1180px; margin: 0 auto; }
   .kicker{
-    font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+    font-size: 11px; letter-spacing: .22em; text-transform: uppercase;
     color: var(--grey-3); margin-bottom: 10px;
   }
   h1{
     font-family: Georgia, "Times New Roman", serif;
-    font-size: 30px; font-weight: 400; letter-spacing: 0.01em;
-    margin-bottom: 8px;
+    font-size: 31px; font-weight: 400; margin-bottom: 9px;
   }
   h1 .name{ color: var(--accent); }
-  .framing{
-    font-size: 15.5px; color: #c4cdd6; max-width: 820px; font-weight: 300;
-  }
-  .status-row{ margin-top: 16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .framing{ font-size: 15.5px; color: #c4cdd6; max-width: 900px; font-weight: 300; }
+  .status-row{ margin-top: 16px; display:flex; gap:10px; flex-wrap:wrap; }
   .badge{
     display:inline-flex; align-items:center; gap:7px;
-    font-size: 11.5px; letter-spacing: 0.05em;
-    padding: 5px 12px; border-radius: 3px;
-    border: 1px solid rgba(255,255,255,0.25); color: var(--grey-2);
-    background: rgba(255,255,255,0.06);
+    font-size: 11.5px; letter-spacing: .05em; padding: 5px 12px; border-radius: 3px;
+    border: 1px solid rgba(255,255,255,.25); color: var(--grey-2);
+    background: rgba(255,255,255,.06);
   }
   .badge .dot{ width:7px; height:7px; border-radius:50%; background: var(--grey-3); flex:0 0 auto; }
-  .badge.live .dot{ background: #56b881; }
-  .badge.fallback .dot{ background: var(--accent); }
+  .badge.live .dot{ background:#56b881; }
 
-  /* ---------- tabs ---------- */
-  nav{
-    position: sticky; top: 0; z-index: 50;
-    background: var(--white);
-    border-bottom: 1px solid var(--grey-2);
-    box-shadow: 0 1px 4px rgba(14,34,56,0.06);
-  }
-  .tabbar{
-    max-width: 1140px; margin: 0 auto; display: flex; overflow-x: auto;
-  }
-  .tabbar button{
-    appearance: none; border: 0; background: none; cursor: pointer;
-    font: inherit; font-size: 13px; letter-spacing: 0.04em;
-    color: var(--grey-6); padding: 15px 18px 13px;
-    border-bottom: 2px solid transparent; white-space: nowrap;
-  }
-  .tabbar button .num{
-    font-size: 10.5px; color: var(--grey-4); margin-right: 7px;
-    font-variant-numeric: tabular-nums;
-  }
-  .tabbar button:hover{ color: var(--navy); }
-  .tabbar button.active{
-    color: var(--navy); font-weight: 600;
-    border-bottom-color: var(--accent);
-  }
-  .tabbar button.active .num{ color: var(--accent); }
+  main{ max-width: 1180px; margin: 0 auto; padding: 26px 28px 60px; }
 
-  /* ---------- layout ---------- */
-  main{ max-width: 1140px; margin: 0 auto; padding: 30px 28px 70px; }
-  section.tab{ display: none; }
-  section.tab.visible{ display: block; animation: fadein .25s ease; }
-  @keyframes fadein{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
-
-  h2{
-    font-family: Georgia, serif; font-weight: 400;
-    font-size: 23px; color: var(--navy); margin-bottom: 6px;
+  /* ---------- idea strip ---------- */
+  .idea-strip{
+    display:grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 22px;
   }
-  .lede{ color: var(--grey-6); max-width: 860px; margin-bottom: 22px; font-size: 15px; }
+  @media (max-width: 900px){ .idea-strip{ grid-template-columns: 1fr; } }
+  .idea{
+    background: var(--white); border: 1px solid var(--grey-2); border-top: 3px solid var(--navy-3);
+    border-radius: 4px; padding: 16px 18px;
+  }
+  .idea:last-child{ border-top-color: var(--accent); }
+  .idea .n{
+    font-size: 11px; letter-spacing: .18em; color: var(--grey-4);
+    text-transform: uppercase; font-weight: 600; margin-bottom: 6px;
+  }
+  .idea h4{ font-size: 15px; color: var(--navy); margin-bottom: 5px; font-family: Georgia, serif; font-weight: 600; }
+  .idea p{ font-size: 13px; color: var(--grey-6); }
 
+  /* ---------- cards ---------- */
   .card{
     background: var(--white); border: 1px solid var(--grey-2);
-    border-radius: 4px; padding: 20px 22px; margin-bottom: 20px;
+    border-radius: 4px; padding: 22px 24px; margin-bottom: 20px;
   }
   .card h3{
-    font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase;
-    color: var(--navy-3); margin-bottom: 12px; font-weight: 600;
+    font-size: 12px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--navy-3); margin-bottom: 14px; font-weight: 600;
   }
   .grid-2{ display:grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  .grid-3{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  @media (max-width: 860px){ .grid-2, .grid-3{ grid-template-columns: 1fr; } }
+  @media (max-width: 900px){ .grid-2{ grid-template-columns: 1fr; } }
 
-  .chart-wrap{ position: relative; }
-  .chart-wrap svg{ display:block; width:100%; height:auto; }
-  .tooltip{
-    position:absolute; pointer-events:none; display:none;
-    background: var(--navy); color: var(--white);
-    font-size: 12px; padding: 7px 10px; border-radius: 3px;
-    white-space: nowrap; z-index: 10; box-shadow: 0 3px 10px rgba(0,0,0,.25);
-    transform: translate(-50%, -115%);
+  .live-tag, .model-tag{
+    display:inline-block; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+    border-radius:2px; padding:2px 8px; margin-left:8px; vertical-align:middle; font-weight:600;
   }
-  .tooltip .tt-sub{ color: var(--grey-3); font-size: 11px; }
-  .legend{ display:flex; gap:20px; flex-wrap:wrap; margin-top: 10px; }
-  .legend .li{ display:flex; align-items:center; gap:7px; font-size:12.5px; color: var(--grey-6); }
-  .legend .swatch{ width:18px; height:0; border-top:3px solid; flex:0 0 auto; }
-  .legend .swatch.dashed{ border-top-style: dashed; }
-  .legend .swatch.dot{ width:9px; height:9px; border:0; border-radius:50%; }
+  .live-tag{ color: var(--good); background:#e5f0ea; border:1px solid #bcd6c7; }
+  .model-tag{ color:#8a5a2a; background:var(--accent-soft); border:1px solid #e0d3ae; }
 
-  .illustrative-tag{
-    display:inline-block; font-size:10.5px; letter-spacing:0.1em; text-transform:uppercase;
-    color: var(--warn); background: var(--accent-soft);
-    border: 1px solid #e0d3ae; border-radius: 2px;
-    padding: 2px 8px; margin-left: 8px; vertical-align: middle; font-weight:600;
-  }
-  .live-tag{
-    display:inline-block; font-size:10.5px; letter-spacing:0.1em; text-transform:uppercase;
-    color: var(--good); background:#e5f0ea; border:1px solid #bcd6c7; border-radius:2px;
-    padding:2px 8px; margin-left:8px; vertical-align:middle; font-weight:600;
-  }
-
-  .stat-row{ display:grid; grid-template-columns: repeat(4,1fr); gap:14px; margin: 18px 0 4px; }
-  @media (max-width: 860px){ .stat-row{ grid-template-columns: repeat(2,1fr); } }
-  .stat{
-    background: var(--grey-1); border-left: 3px solid var(--accent);
-    padding: 12px 14px; border-radius: 2px;
-  }
-  .stat .v{ font-size: 21px; color: var(--navy); font-weight:600; font-variant-numeric: tabular-nums; }
-  .stat .l{ font-size: 11.5px; color: var(--grey-6); letter-spacing:0.03em; margin-top:2px; }
-
-  .btn-group{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 14px; }
-  .btn-group button{
-    appearance:none; cursor:pointer; font:inherit; font-size:12.5px;
-    padding: 7px 14px; border-radius:3px;
-    border:1px solid var(--grey-2); background:var(--white); color:var(--grey-6);
-  }
-  .btn-group button:hover{ border-color: var(--grey-3); }
-  .btn-group button.on{
-    background: var(--navy); border-color: var(--navy); color: var(--white); font-weight:600;
-  }
-
-  table.data{
-    width:100%; border-collapse: collapse; font-size: 13px;
-  }
-  table.data th{
-    text-align:left; font-size:10.5px; letter-spacing:0.12em; text-transform:uppercase;
-    color:var(--grey-4); font-weight:600; padding: 8px 10px;
-    border-bottom: 2px solid var(--grey-2);
-  }
-  table.data td{
-    padding: 8px 10px; border-bottom:1px solid var(--grey-1);
-    font-variant-numeric: tabular-nums;
-  }
-  table.data td.num, table.data th.num{ text-align:right; }
-  table.data tr.hl td{ background: var(--accent-soft); }
-
-  .step-cards{ counter-reset: step; }
-  .step-card{
-    display:flex; gap:16px; padding: 14px 0; border-bottom:1px solid var(--grey-1);
-  }
-  .step-card:last-child{ border-bottom:0; }
-  .step-card .n{
-    flex: 0 0 30px; height:30px; border-radius:50%;
-    background: var(--navy); color: var(--white);
-    display:flex; align-items:center; justify-content:center;
-    font-size:13px; font-weight:600;
-  }
-  .step-card .n.accent{ background: var(--accent); }
-  .step-card h4{ font-size:14px; color:var(--navy); margin-bottom:3px; }
-  .step-card p{ font-size:13.5px; color:var(--grey-6); }
-
-  .callout{
-    border-left: 3px solid var(--accent);
-    background: var(--accent-soft);
-    padding: 14px 18px; border-radius: 2px; margin: 16px 0;
-    font-size: 14.5px; color: var(--ink);
-  }
-  .callout strong{ color: var(--navy); }
-
-  .concede{
-    border-left: 3px solid var(--grey-3);
-    background: var(--grey-1); padding: 14px 18px; border-radius:2px;
-    font-size: 13.5px; color: var(--grey-6);
-  }
-  .concede strong{ color: var(--ink); }
-
-  ul.tight{ padding-left: 18px; }
-  ul.tight li{ margin-bottom: 7px; font-size: 13.5px; color: var(--grey-6); }
-  ul.tight li strong{ color: var(--ink); }
-
-  .adv-bars{ margin-top: 14px; }
-  .adv-bar-row{ display:flex; align-items:center; gap:12px; margin-bottom: 10px; }
-  .adv-bar-row .lbl{ flex: 0 0 250px; font-size: 12.5px; color: var(--grey-6); text-align:right; }
-  .adv-bar-row .bar-track{ flex:1; background: var(--grey-1); border-radius:2px; height: 22px; position:relative; }
-  .adv-bar-row .bar{ height:100%; border-radius:2px; }
-  .adv-bar-row .val{ flex: 0 0 90px; font-size: 12.5px; color: var(--navy); font-weight:600; font-variant-numeric: tabular-nums; }
-  @media (max-width: 700px){ .adv-bar-row .lbl{ flex-basis: 130px; } }
-
-  /* ---------- tab 6: factor model controls ---------- */
-  .model-layout{ display:grid; grid-template-columns: 300px 1fr; gap: 20px; align-items:start; }
+  /* ---------- model layout ---------- */
+  .model-layout{ display:grid; grid-template-columns: 296px 1fr; gap: 24px; align-items:start; }
   @media (max-width: 960px){ .model-layout{ grid-template-columns: 1fr; } }
-  .ctrl-panel{ position: sticky; top: 62px; }
-  .factor-ctrl{ margin-bottom: 16px; }
-  .factor-ctrl .fc-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; }
+
+  .factor-ctrl{ margin-bottom: 15px; }
+  .factor-ctrl .fc-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:3px; }
   .factor-ctrl label{ font-size: 12.5px; color: var(--ink); font-weight:600; }
   .factor-ctrl .fc-val{
-    font-size: 12.5px; color: var(--navy); font-weight:600;
-    font-variant-numeric: tabular-nums; background: var(--grey-1);
-    padding: 1px 8px; border-radius: 2px; min-width: 52px; text-align:right;
+    font-size: 12.5px; color: var(--navy); font-weight:600; font-variant-numeric: tabular-nums;
+    background: var(--grey-1); padding: 1px 8px; border-radius: 2px; min-width: 56px; text-align:right;
   }
   .factor-ctrl .fc-sub{ font-size: 11px; color: var(--grey-4); margin-top:2px; }
   input[type="range"]{
@@ -246,14 +116,19 @@
     box-shadow: 0 0 0 1px var(--grey-3), 0 1px 3px rgba(0,0,0,.25); cursor:pointer;
   }
   input[type="range"]::-moz-range-thumb{
-    width:13px; height:13px; border-radius:50%;
-    background: var(--navy); border: 2.5px solid var(--white);
-    box-shadow: 0 0 0 1px var(--grey-3); cursor:pointer;
+    width:13px; height:13px; border-radius:50%; background: var(--navy);
+    border: 2.5px solid var(--white); box-shadow: 0 0 0 1px var(--grey-3); cursor:pointer;
   }
-  .toggle-row{ display:flex; align-items:center; gap:9px; margin-bottom:9px; cursor:pointer; user-select:none; }
-  .toggle-row input{ accent-color: var(--navy); width:15px; height:15px; cursor:pointer; }
-  .toggle-row .tg-swatch{ width:16px; height:0; border-top:3px solid; flex:0 0 auto; }
-  .toggle-row .tg-lbl{ font-size:12.5px; color:var(--grey-6); }
+  .ctrl-actions{ display:flex; gap:14px; align-items:center; margin-top:6px; }
+  .ctrl-actions button{
+    appearance:none; cursor:pointer; font:inherit; font-size:12.5px; font-weight:600;
+    padding: 8px 14px; border-radius:3px; border:1px solid var(--navy);
+    background: var(--navy); color: var(--white);
+  }
+  .ctrl-actions button.ghost{ background:var(--white); color:var(--navy); font-weight:500; }
+  .fit-note{ font-size:12px; color:var(--grey-6); margin-top:10px; line-height:1.5; }
+  .fit-note strong{ color: var(--navy); }
+
   .transport{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom: 12px; }
   .transport button{
     appearance:none; cursor:pointer; font:inherit; font-size:12.5px; font-weight:600;
@@ -261,596 +136,216 @@
     background: var(--navy); color: var(--white);
   }
   .transport button.secondary{ background:var(--white); color:var(--navy); }
-  .transport button:disabled{ opacity:.45; cursor:default; }
   .transport .tick-date{
     font-size: 13px; color: var(--navy); font-weight:600; font-variant-numeric: tabular-nums;
-    background: var(--grey-1); padding: 6px 12px; border-radius:3px; min-width: 120px; text-align:center;
+    background: var(--grey-1); padding: 6px 12px; border-radius:3px; min-width: 118px; text-align:center;
   }
   .transport .speed{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--grey-4); }
-  .transport .speed select{ font:inherit; font-size:12px; padding:4px 6px; border:1px solid var(--grey-2); border-radius:3px; background:var(--white); color:var(--ink); }
-  .fit-metrics{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  .transport .speed select{
+    font:inherit; font-size:12px; padding:4px 6px; border:1px solid var(--grey-2);
+    border-radius:3px; background:var(--white); color:var(--ink);
+  }
+
+  .chart-wrap{ position: relative; }
+  .chart-wrap svg{ display:block; width:100%; height:auto; }
+  .tooltip{
+    position:absolute; pointer-events:none; display:none;
+    background: var(--navy); color: var(--white); font-size: 12px;
+    padding: 7px 10px; border-radius: 3px; white-space: nowrap; z-index: 10;
+    box-shadow: 0 3px 10px rgba(0,0,0,.25); transform: translate(-50%, -115%);
+  }
+  .tooltip .tt-sub{ color: var(--grey-3); font-size: 11px; }
+
+  .legend{ display:flex; gap:18px; flex-wrap:wrap; margin-top: 12px; }
+  .toggle-row{ display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+  .toggle-row input{ accent-color: var(--navy); width:14px; height:14px; cursor:pointer; }
+  .toggle-row .tg-swatch{ width:16px; height:0; border-top:3px solid; flex:0 0 auto; }
+  .toggle-row .tg-lbl{ font-size:12.5px; color:var(--grey-6); }
+
+  .fit-metrics{ display:grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-top: 14px; }
   @media (max-width: 860px){ .fit-metrics{ grid-template-columns: repeat(2,1fr); } }
   .fit-metrics .fm{
-    background: var(--grey-1); border-radius:2px; padding: 9px 12px;
+    background: var(--grey-1); border-radius:2px; padding: 11px 14px;
     border-left: 3px solid var(--navy-3);
   }
-  .fit-metrics .fm .v{ font-size:17px; font-weight:600; color:var(--navy); font-variant-numeric:tabular-nums; }
-  .fit-metrics .fm .l{ font-size:10.5px; color:var(--grey-6); letter-spacing:.03em; }
-  .reset-link{
-    appearance:none; border:0; background:none; cursor:pointer; font:inherit;
-    font-size:12px; color: var(--accent); text-decoration:underline; padding:0;
+  .fit-metrics .fm:first-child{ border-left-color: var(--accent); }
+  .fit-metrics .fm .v{ font-size:19px; font-weight:600; color:var(--navy); font-variant-numeric:tabular-nums; }
+  .fit-metrics .fm .l{ font-size:10.5px; color:var(--grey-6); letter-spacing:.03em; margin-top:1px; }
+
+  .callout{
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    padding: 14px 18px; border-radius: 2px; margin-top: 14px;
+    font-size: 14px; color: var(--ink);
+  }
+  .callout strong{ color: var(--navy); }
+
+  ul.tight{ padding-left: 18px; }
+  ul.tight li{ margin-bottom: 8px; font-size: 13.5px; color: var(--grey-6); }
+  ul.tight li strong{ color: var(--ink); }
+  .equation{
+    background: var(--grey-1); border-radius: 3px; padding: 12px 16px;
+    font-size: 13.5px; color: var(--navy); margin-top: 12px;
+    font-family: Georgia, serif; text-align: center;
   }
 
   footer{
     border-top: 1px solid var(--grey-2); background: var(--white);
     padding: 20px 28px; font-size: 12px; color: var(--grey-4);
   }
-  footer .inner{ max-width: 1140px; margin: 0 auto; }
-
   svg text{ font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
-  .diagram-note{ font-size: 12.5px; color: var(--grey-4); margin-top: 10px; }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="header-inner">
-    <div class="kicker">Goldman Sachs Asset Management — Interview Follow-up</div>
-    <h1>Private-Market Return Replication — <span class="name">Alex Runcianu</span></h1>
-    <div class="framing">How a sparse, event-driven private valuation series becomes a continuous, liquid, tradable return stream — and where the liquidity actually comes from.</div>
+  <div class="shell">
+    <div class="kicker">Quantitative Investment Strategies — Interview Follow-up</div>
+    <h1>Replicating a Private Return Stream — <span class="name">Alex Runcianu</span></h1>
+    <div class="framing">
+      OpenAI&rsquo;s private-market marks (OPAI.PVT), re-expressed as a liquid, daily, factor-based
+      series — the mechanism behind the GS/MSCI World Private Equity Return Tracker (GSPE),
+      demonstrated on a single name with real data.
+    </div>
     <div class="status-row">
-      <span class="badge" id="dataBadge"><span class="dot"></span><span id="dataBadgeText">Attempting live market-data fetch&hellip;</span></span>
-      <span class="badge"><span class="dot" style="background:var(--grey-3)"></span>Self-contained &middot; no external libraries &middot; works offline</span>
+      <span class="badge live" id="dataBadge"><span class="dot"></span><span id="dataBadgeText">Real Yahoo Finance data — embedded snapshot</span></span>
+      <span class="badge"><span class="dot"></span>Single file &middot; no libraries &middot; works offline</span>
     </div>
   </div>
 </header>
 
-<nav>
-  <div class="tabbar" id="tabbar">
-    <button data-tab="tab1" class="active"><span class="num">01</span>The Problem</button>
-    <button data-tab="tab2"><span class="num">02</span>Constructing a Liquid Series</button>
-    <button data-tab="tab3"><span class="num">03</span>Where the Liquidity Comes From</button>
-    <button data-tab="tab4"><span class="num">04</span>Link to GSPE</button>
-    <button data-tab="tab5"><span class="num">05</span>My Proposal</button>
-    <button data-tab="tab6"><span class="num">06</span>Live Model: OPAI.PVT</button>
-  </div>
-</nav>
-
 <main>
 
-  <!-- ============================= TAB 1 ============================= -->
-  <section class="tab visible" id="tab1">
-    <h2>The Problem: private assets have no price between events</h2>
-    <p class="lede">
-      A private company is valued only when something happens — a funding round, a periodic
-      mark-to-market by its holders, or a secondary transaction. Between those points there is
-      <em>no observable price and no liquidity</em>. The valuation series is a step function:
-      flat for months, then a jump. You cannot trade a step function.
-    </p>
+  <div class="idea-strip">
+    <div class="idea">
+      <div class="n">1 &middot; The target</div>
+      <h4>Private marks, not trades</h4>
+      <p>OPAI.PVT prints a row every day but only ~59 distinct prices in 3.5 years. It is a
+      step function of funding rounds and secondary marks — stale, un-tradable, no intraday price.</p>
+    </div>
+    <div class="idea">
+      <div class="n">2 &middot; The replication</div>
+      <h4>A liquid factor basket</h4>
+      <p>A daily model NAV built from listed ETFs — AI &amp; tech (AIQ), world equity (URTH), listed
+      private equity (PSP) — plus a drift term. Every parameter is adjustable below; liquidity is
+      inherited from the basket.</p>
+    </div>
+    <div class="idea">
+      <div class="n">3 &middot; The lesson</div>
+      <h4>Why GSPE tracks the asset class</h4>
+      <p>Backtest one company and idiosyncratic &alpha; dominates — factors explain little.
+      Across thousands of companies the stories diversify away and factors dominate.
+      That is exactly the exposure GSPE replicates.</p>
+    </div>
+  </div>
 
+  <div class="card">
+    <h3>Factor model vs. market — all series normalised to 100
+      <span class="live-tag">Real data — Yahoo Finance</span><span class="model-tag">Gold line is a model</span>
+    </h3>
+    <div class="model-layout">
+      <div>
+        <div class="factor-ctrl">
+          <div class="fc-head"><label>&alpha; — idiosyncratic drift</label><span class="fc-val" id="v_alpha"></span></div>
+          <input type="range" id="s_alpha" min="-20" max="80" step="1" value="30">
+          <div class="fc-sub">Annualised growth not explained by any factor — the company-specific story.</div>
+        </div>
+        <div class="factor-ctrl">
+          <div class="fc-head"><label>&beta; — AI &amp; tech (AIQ)</label><span class="fc-val" id="v_bAIQ"></span></div>
+          <input type="range" id="s_bAIQ" min="-1.5" max="2.5" step="0.05" value="0.35">
+          <div class="fc-sub">Exposure to listed AI &amp; technology moves.</div>
+        </div>
+        <div class="factor-ctrl">
+          <div class="fc-head"><label>&beta; — world equity (URTH)</label><span class="fc-val" id="v_bURTH"></span></div>
+          <input type="range" id="s_bURTH" min="-1.5" max="2.5" step="0.05" value="0.15">
+          <div class="fc-sub">Broad global-equity market beta.</div>
+        </div>
+        <div class="factor-ctrl">
+          <div class="fc-head"><label>&beta; — listed PE (PSP)</label><span class="fc-val" id="v_bPSP"></span></div>
+          <input type="range" id="s_bPSP" min="-1.5" max="2.5" step="0.05" value="0.1">
+          <div class="fc-sub">Exposure to listed private-equity managers.</div>
+        </div>
+        <div class="factor-ctrl">
+          <div class="fc-head"><label>&sigma; — idiosyncratic vol</label><span class="fc-val" id="v_idio"></span></div>
+          <input type="range" id="s_idio" min="0" max="60" step="1" value="12">
+          <div class="fc-sub">Annualised company-specific noise (seeded, reproducible).</div>
+        </div>
+        <div class="factor-ctrl">
+          <div class="fc-head"><label>Backtest horizon</label><span class="fc-val" id="v_cad"></span></div>
+          <input type="range" id="s_cad" min="5" max="63" step="1" value="21">
+          <div class="fc-sub">Model vs. marks compared every N trading days — daily comparison is meaningless against stale marks.</div>
+        </div>
+        <div class="ctrl-actions">
+          <button id="btnFit">Fit to data (OLS)</button>
+          <button id="btnDefaults" class="ghost">Reset</button>
+        </div>
+        <div class="fit-note" id="fitNote"></div>
+      </div>
+      <div>
+        <div class="transport">
+          <button id="btnPlay">&#9654;&nbsp; Replay history</button>
+          <button id="btnReset" class="secondary">Show all</button>
+          <span class="tick-date" id="tickDate">&mdash;</span>
+          <span class="speed">speed
+            <select id="speedSel">
+              <option value="2">2 d/tick</option>
+              <option value="5" selected>5 d/tick</option>
+              <option value="10">10 d/tick</option>
+              <option value="21">21 d/tick</option>
+            </select>
+          </span>
+          <span class="speed" style="flex:1; min-width:140px;">
+            <input type="range" id="scrub" min="1" max="100" value="100" style="margin:0;">
+          </span>
+        </div>
+        <div class="chart-wrap" id="chartModel"></div>
+        <div class="legend" id="modelToggles"></div>
+        <div class="fit-metrics" id="fitMetrics"></div>
+      </div>
+    </div>
+    <div class="callout" id="keyInsight">
+      <strong>The point in one line:</strong> a liquid basket can carry the <em>systematic</em> part of a
+      private asset — the factor betas — but it cannot manufacture single-name &alpha;. Press
+      <strong>Fit to data</strong>: &alpha; absorbs ~50%/yr of OPAI&rsquo;s return while every beta stays small.
+      Replication is an asset-class tool, which is precisely how GSPE uses it.
+    </div>
+  </div>
+
+  <div class="grid-2">
     <div class="card">
-      <h3>Post-money valuation path — discrete marks only <span class="illustrative-tag">Illustrative data</span></h3>
-      <div class="btn-group" id="companyBtns"></div>
-      <div class="chart-wrap" id="chartStep"></div>
-      <div class="legend" id="chartStepLegend"></div>
-      <div class="stat-row" id="stepStats"></div>
-      <p class="diagram-note">
-        Grey shading marks the intervals in which the asset has <strong>no observable price</strong> —
-        the reported valuation is simply the last event, growing staler by the day.
-        Pre-IPO names have no continuous market price to fetch, so the funding-round histories above are
-        an explicitly illustrative dataset (fictional companies, plausible round cadence).
-      </p>
+      <h3>How to read this</h3>
+      <ul class="tight">
+        <li><strong>Navy step line</strong> — OPAI.PVT, OpenAI&rsquo;s real private marks. Flat for weeks, then a jump: each jump is a funding round or secondary mark, the only genuine observations.</li>
+        <li><strong>Gold line</strong> — the factor model NAV, rebuilt instantly from the sliders. Unlike the marks, it has a price every day and every input is a liquid, tradable instrument.</li>
+        <li><strong>Fit to data</strong> runs a least-squares regression of OPAI&rsquo;s returns on the three factors at the chosen horizon and sets the sliders to the fitted values. At a daily horizon the fit is R&sup2; &asymp; 0.00 — stale marks simply do not respond to daily market moves. Monthly, R&sup2; &asymp; 0.2 and fitted &alpha; &asymp; 50%/yr.</li>
+        <li><strong>Try one experiment:</strong> after fitting, drag &alpha; to zero. The factor-only basket falls far behind the marks — that gap is the idiosyncratic OpenAI story no liquid basket can replicate.</li>
+      </ul>
     </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <h3>Contrast: a listed-equity basket over the same window <span id="contrastTag" class="illustrative-tag">Illustrative data</span></h3>
-        <div class="chart-wrap" id="chartContrast"></div>
-        <p class="diagram-note" id="contrastNote"></p>
-      </div>
-      <div class="card">
-        <h3>Why the step function is un-tradable</h3>
-        <ul class="tight">
-          <li><strong>No intraday price.</strong> There is nothing to quote against between events; a market maker cannot hedge or mark a position.</li>
-          <li><strong>Stale marks.</strong> The &ldquo;current&rdquo; valuation can be a year old. Reported private-market NAVs are smoothed and lag public markets, understating true volatility and correlation.</li>
-          <li><strong>No liquidity between events.</strong> Exit requires a negotiated secondary at an unknown discount, on weeks-to-months timelines, often with transfer restrictions and issuer consent.</li>
-          <li><strong>Jump risk.</strong> All price discovery is compressed into the event itself — a down round reprices the whole holding period at once.</li>
-        </ul>
-        <div class="callout">
-          The task is therefore a <strong>transformation problem</strong>: convert a sparse,
-          stepwise valuation series into a continuous return stream that can actually be bought,
-          sold and risk-managed daily. Tab 02 shows how.
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================= TAB 2 ============================= -->
-  <section class="tab" id="tab2">
-    <h2>Constructing a Liquid Series</h2>
-    <p class="lede">
-      The transformation has three stages: take the discrete marks, model the continuous return
-      path they imply, then map that return profile onto a basket of liquid listed equities so the
-      series becomes genuinely tradable. Use the stage buttons to build the picture up.
-    </p>
-
     <div class="card">
-      <h3>Worked example — Aurora Compute <span class="illustrative-tag">Illustrative &amp; modelled data</span></h3>
-      <div class="btn-group" id="stageBtns">
-        <button data-stage="a" class="on">Stage A &mdash; discrete marks</button>
-        <button data-stage="b">Stage B &mdash; modelled continuous path</button>
-        <button data-stage="c">Stage C &mdash; liquid proxy basket</button>
-      </div>
-      <div class="chart-wrap" id="chartStages"></div>
-      <div class="legend" id="chartStagesLegend"></div>
-      <div id="stageExplain" style="margin-top:14px;"></div>
+      <h3>Data &amp; method</h3>
+      <ul class="tight">
+        <li><strong>All price series are real</strong> — Yahoo Finance daily closes for OPAI.PVT (OpenAI, instrument type PRIVATE_COMPANY), AIQ, URTH, PSP and GSPE.L, embedded as a snapshot (as of <span id="snapDate"></span>) so the page works offline. A live refresh is attempted at load.</li>
+        <li><strong>OPAI.PVT is marks, not trades</strong> — Yahoo derives it from funding rounds and secondary activity. Levels are indicative; that staleness is the phenomenon being studied, not a data flaw.</li>
+        <li><strong>GSPE.L</strong> — the GS/MSCI World PE Return Tracker UCITS ETF — listed in Jan 2026, so it is spliced onto the chart at OPAI&rsquo;s normalised level on its first trading day (labelled in the legend).</li>
+        <li><strong>The gold line is a model</strong>, not an observed price. The backtest compares it with OPAI.PVT only at the chosen horizon; correlation and tracking error update live as you move any slider.</li>
+      </ul>
+      <div class="equation">&Delta;log NAV&nbsp;=&nbsp;&alpha;/252 &nbsp;+&nbsp; &beta;<sub>AIQ</sub>&middot;r<sub>AIQ</sub> &nbsp;+&nbsp; &beta;<sub>WLD</sub>&middot;r<sub>URTH</sub> &nbsp;+&nbsp; &beta;<sub>PE</sub>&middot;r<sub>PSP</sub> &nbsp;+&nbsp; &sigma;&middot;&epsilon;<sub>t</sub></div>
     </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <h3>The three steps in plain English</h3>
-        <div class="step-cards">
-          <div class="step-card">
-            <div class="n">A</div>
-            <div>
-              <h4>Take the discrete valuation points</h4>
-              <p>Funding rounds, holder marks and secondary prints are the only real observations.
-              Everything else is inference — so keep them distinct and honest: these are the anchors,
-              nothing between them is data.</p>
-            </div>
-          </div>
-          <div class="step-card">
-            <div class="n">B</div>
-            <div>
-              <h4>Model a continuous return path between anchors</h4>
-              <p>Between two marks, estimate the path the valuation most plausibly followed — a
-              bridge in log-space, conditioned on both endpoints, with volatility borrowed from
-              comparable listed names (de-smoothed, since reported private marks understate risk).
-              This yields a daily return series, but it is a <em>model</em>, not a price.</p>
-            </div>
-          </div>
-          <div class="step-card">
-            <div class="n accent">C</div>
-            <div>
-              <h4>Map the return profile onto liquid listed equities</h4>
-              <p>Find the basket of public stocks — matched on sector, stage and style
-              (size, growth, quality, beta) — whose combined daily return best replicates the modelled
-              path. The basket <em>is</em> tradable: real prices, real depth, daily dealing. The private
-              return profile now has a liquid expression.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Proxy basket — matched on sector, stage, style <span class="illustrative-tag">Illustrative weights</span></h3>
-        <table class="data">
-          <thead><tr>
-            <th>Proxy sleeve</th><th>Match logic</th><th class="num">Weight</th>
-          </tr></thead>
-          <tbody>
-            <tr><td>Listed AI-infrastructure &amp; semis</td><td>Sector: core business overlap</td><td class="num">35%</td></tr>
-            <tr><td>Recent-IPO growth software cohort</td><td>Stage: closest public analogue of late-stage private</td><td class="num">25%</td></tr>
-            <tr><td>Mid-cap high-growth tech</td><td>Style: size &amp; growth factor match</td><td class="num">20%</td></tr>
-            <tr><td>High-beta small-cap growth</td><td>Style: matches de-smoothed private volatility</td><td class="num">15%</td></tr>
-            <tr><td>Cash / short-duration</td><td>Damps residual beta to target</td><td class="num">5%</td></tr>
-          </tbody>
-        </table>
-        <p class="diagram-note">
-          Weights are re-estimated on a rolling window against the modelled return path and rebalanced
-          on a schedule that trades tracking fidelity against turnover — the same discipline used in
-          factor-replication indices.
-        </p>
-        <div class="callout">
-          <strong>Before:</strong> a step function with ~1 observation per year and no exit.<br>
-          <strong>After:</strong> a daily, investable series whose return profile matches the private
-          asset&rsquo;s — because liquidity is inherited from the listed basket, not conjured from the
-          private asset itself.
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================= TAB 3 ============================= -->
-  <section class="tab" id="tab3">
-    <h2>Where the Liquidity Comes From</h2>
-    <p class="lede">
-      Wrap the liquid proxy basket in an index or ETF and the liquidity is layered. The screen
-      volume you see quoted is the <em>smallest</em> layer. The real capacity sits underneath, in
-      the aggregate depth of the listed constituents, accessed through creation and redemption.
-    </p>
-
-    <div class="card">
-      <h3>The layered liquidity model</h3>
-      <div class="chart-wrap">
-        <svg viewBox="0 0 960 600" role="img" aria-label="Layered liquidity diagram">
-          <defs>
-            <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-              <path d="M0,0 L10,5 L0,10 z" fill="#7b8794"/>
-            </marker>
-            <marker id="arrAccent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-              <path d="M0,0 L10,5 L0,10 z" fill="#b08d3e"/>
-            </marker>
-          </defs>
-
-          <!-- investors -->
-          <rect x="330" y="18" width="300" height="58" rx="4" fill="#16324f"/>
-          <text x="480" y="42" text-anchor="middle" fill="#fff" font-size="15" font-weight="600">End investors</text>
-          <text x="480" y="61" text-anchor="middle" fill="#aab4be" font-size="12">buy / sell shares of the vehicle</text>
-
-          <!-- arrows investors <-> secondary -->
-          <line x1="410" y1="76" x2="410" y2="128" stroke="#7b8794" stroke-width="1.6" marker-end="url(#arr)" marker-start="url(#arr)"/>
-          <line x1="550" y1="76" x2="550" y2="128" stroke="#7b8794" stroke-width="1.6" marker-end="url(#arr)" marker-start="url(#arr)"/>
-
-          <!-- secondary layer -->
-          <rect x="60" y="132" width="840" height="112" rx="4" fill="#ffffff" stroke="#d9dee3"/>
-          <text x="80" y="158" fill="#7b8794" font-size="10.5" letter-spacing="2" font-weight="600">SECONDARY MARKET — LAYER 2</text>
-          <rect x="90" y="172" width="360" height="56" rx="3" fill="#eef0f3"/>
-          <text x="270" y="196" text-anchor="middle" fill="#1d2833" font-size="13" font-weight="600">Exchange order book</text>
-          <text x="270" y="214" text-anchor="middle" fill="#46525e" font-size="11.5">the visible &ldquo;screen volume&rdquo; — often thin</text>
-          <rect x="510" y="172" width="360" height="56" rx="3" fill="#eef0f3"/>
-          <text x="690" y="196" text-anchor="middle" fill="#1d2833" font-size="13" font-weight="600">RFQ / OTC block liquidity</text>
-          <text x="690" y="214" text-anchor="middle" fill="#46525e" font-size="11.5">market makers quote size priced off the basket</text>
-
-          <!-- arrows secondary <-> MM/AP -->
-          <line x1="480" y1="244" x2="480" y2="296" stroke="#7b8794" stroke-width="1.6" marker-end="url(#arr)" marker-start="url(#arr)"/>
-
-          <!-- MM / AP layer -->
-          <rect x="60" y="300" width="840" height="88" rx="4" fill="#ffffff" stroke="#d9dee3"/>
-          <text x="80" y="326" fill="#7b8794" font-size="10.5" letter-spacing="2" font-weight="600">PRIMARY MARKET — LAYER 1</text>
-          <rect x="90" y="338" width="480" height="40" rx="3" fill="#eef0f3"/>
-          <text x="330" y="363" text-anchor="middle" fill="#1d2833" font-size="12.5" font-weight="600">Authorised Participants: create / redeem in-kind against the basket</text>
-          <rect x="600" y="338" width="270" height="40" rx="3" fill="#eef0f3"/>
-          <text x="735" y="363" text-anchor="middle" fill="#1d2833" font-size="12.5" font-weight="600">Arbitrage pins price to basket NAV</text>
-
-          <!-- arrows MM/AP <-> basket -->
-          <line x1="330" y1="388" x2="330" y2="446" stroke="#b08d3e" stroke-width="2" marker-end="url(#arrAccent)" marker-start="url(#arrAccent)"/>
-          <line x1="630" y1="388" x2="630" y2="446" stroke="#b08d3e" stroke-width="2" marker-end="url(#arrAccent)" marker-start="url(#arrAccent)"/>
-
-          <!-- foundation -->
-          <rect x="60" y="450" width="840" height="104" rx="4" fill="#f3ecdc" stroke="#b08d3e" stroke-width="1.5"/>
-          <text x="80" y="478" fill="#8a5a2a" font-size="10.5" letter-spacing="2" font-weight="600">FOUNDATION — LAYER 0</text>
-          <text x="480" y="504" text-anchor="middle" fill="#0e2238" font-size="15.5" font-weight="700">Underlying listed basket — aggregate depth of every constituent</text>
-          <text x="480" y="526" text-anchor="middle" fill="#46525e" font-size="12.5">deep, continuous, two-sided markets in each stock &middot; this is where the true liquidity lives</text>
-          <text x="480" y="545" text-anchor="middle" fill="#8a5a2a" font-size="11.5" font-style="italic">a wrapper can never be more liquid than this layer — and rarely needs to be less</text>
-        </svg>
-      </div>
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <h3>Screen volume vs. real capacity <span class="illustrative-tag">Illustrative figures</span></h3>
-        <div class="adv-bars">
-          <div class="adv-bar-row">
-            <div class="lbl">ETF on-screen average daily volume</div>
-            <div class="bar-track"><div class="bar" style="width:3%; background:var(--grey-3)"></div></div>
-            <div class="val">$8m</div>
-          </div>
-          <div class="adv-bar-row">
-            <div class="lbl">Aggregate ADV of underlying basket</div>
-            <div class="bar-track"><div class="bar" style="width:92%; background:var(--accent)"></div></div>
-            <div class="val">$2.1bn</div>
-          </div>
-        </div>
-        <p class="diagram-note">
-          An AP can create or redeem against the basket at any size the constituents can absorb.
-          Judging an index wrapper by its own printed volume is like judging a currency pair by the
-          turnover of one broker.
-        </p>
-      </div>
-      <div class="card">
-        <h3>The direct answer to the question I was asked</h3>
-        <div class="callout" style="margin-top:0;">
-          <strong>True liquidity = the underlying listed basket&rsquo;s depth, not the ETF&rsquo;s screen volume.</strong>
-        </div>
-        <ul class="tight">
-          <li><strong>Primary layer:</strong> APs create and redeem shares in-kind against the basket, so the vehicle&rsquo;s capacity scales with the constituents&rsquo; tradability, not with its own trading history.</li>
-          <li><strong>Secondary layer:</strong> exchange order book plus RFQ/OTC — market makers will quote block size because they can hedge instantly in the underlying names.</li>
-          <li><strong>No liquidity mismatch:</strong> because the holdings are liquid public equities, daily dealing is honest — there is no gate, no side-pocket, no fire-sale risk of the kind that breaks open-ended private-asset funds.</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================= TAB 4 ============================= -->
-  <section class="tab" id="tab4">
-    <h2>Link to GSPE — the GS/MSCI World Private Equity Return Tracker</h2>
-    <p class="lede">
-      Everything in tabs 01&ndash;03 is exactly what GSPE does at index scale: it holds liquid public
-      equities selected to replicate the return profile of MSCI&rsquo;s private-equity dataset
-      (~$7.7tn of private-capital fund data) by region, sector, size and style — PE-like exposure
-      with daily liquidity and no liquidity mismatch.
-    </p>
-
-    <div class="card">
-      <h3>The GSPE pipeline</h3>
-      <div class="chart-wrap">
-        <svg viewBox="0 0 960 210" role="img" aria-label="GSPE pipeline diagram">
-          <defs>
-            <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-              <path d="M0,0 L10,5 L0,10 z" fill="#7b8794"/>
-            </marker>
-          </defs>
-          <rect x="20" y="46" width="200" height="112" rx="4" fill="#16324f"/>
-          <text x="120" y="86" text-anchor="middle" fill="#fff" font-size="13.5" font-weight="600">MSCI private-capital</text>
-          <text x="120" y="104" text-anchor="middle" fill="#fff" font-size="13.5" font-weight="600">dataset (~$7.7tn)</text>
-          <text x="120" y="128" text-anchor="middle" fill="#aab4be" font-size="11">fund-level PE returns,</text>
-          <text x="120" y="144" text-anchor="middle" fill="#aab4be" font-size="11">sparse &amp; lagged marks</text>
-
-          <line x1="220" y1="102" x2="262" y2="102" stroke="#7b8794" stroke-width="1.8" marker-end="url(#arr2)"/>
-
-          <rect x="266" y="46" width="200" height="112" rx="4" fill="#ffffff" stroke="#d9dee3"/>
-          <text x="366" y="86" text-anchor="middle" fill="#0e2238" font-size="13.5" font-weight="600">Characterise the</text>
-          <text x="366" y="104" text-anchor="middle" fill="#0e2238" font-size="13.5" font-weight="600">return profile</text>
-          <text x="366" y="128" text-anchor="middle" fill="#46525e" font-size="11">region &middot; sector &middot; size &middot; style</text>
-          <text x="366" y="144" text-anchor="middle" fill="#46525e" font-size="11">de-smoothed exposures</text>
-
-          <line x1="466" y1="102" x2="508" y2="102" stroke="#7b8794" stroke-width="1.8" marker-end="url(#arr2)"/>
-
-          <rect x="512" y="46" width="200" height="112" rx="4" fill="#ffffff" stroke="#d9dee3"/>
-          <text x="612" y="86" text-anchor="middle" fill="#0e2238" font-size="13.5" font-weight="600">Select liquid public</text>
-          <text x="612" y="104" text-anchor="middle" fill="#0e2238" font-size="13.5" font-weight="600">equities to match it</text>
-          <text x="612" y="128" text-anchor="middle" fill="#46525e" font-size="11">systematic, rules-based</text>
-          <text x="612" y="144" text-anchor="middle" fill="#46525e" font-size="11">rebalanced basket</text>
-
-          <line x1="712" y1="102" x2="754" y2="102" stroke="#7b8794" stroke-width="1.8" marker-end="url(#arr2)"/>
-
-          <rect x="758" y="46" width="182" height="112" rx="4" fill="#f3ecdc" stroke="#b08d3e" stroke-width="1.5"/>
-          <text x="849" y="86" text-anchor="middle" fill="#0e2238" font-size="13.5" font-weight="700">GSPE</text>
-          <text x="849" y="106" text-anchor="middle" fill="#46525e" font-size="11.5">PE-like return stream</text>
-          <text x="849" y="122" text-anchor="middle" fill="#46525e" font-size="11.5">daily liquidity</text>
-          <text x="849" y="138" text-anchor="middle" fill="#46525e" font-size="11.5">no liquidity mismatch</text>
-        </svg>
-      </div>
-      <p class="diagram-note">
-        Steps two and three are the index-scale versions of Stage B and Stage C in tab 02:
-        characterise the return profile implied by sparse private marks, then hold the liquid
-        basket that best expresses it.
-      </p>
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <h3>What it captures</h3>
-        <ul class="tight">
-          <li><strong>The systematic return profile of private equity</strong> — the region, sector, size and style exposures that drive most of the asset class&rsquo;s return, sourced from MSCI&rsquo;s dataset rather than a hand-picked comparables list.</li>
-          <li><strong>Daily, honest liquidity.</strong> The holdings are public equities, so dealing terms match the assets — the structural failure mode of semi-liquid private wrappers (gates, queues, stale NAVs) is designed out.</li>
-          <li><strong>Immediate, cheap deployment.</strong> No capital calls, no J-curve, no vintage lottery; useful both as core exposure and as a liquidity sleeve alongside true fund commitments.</li>
-        </ul>
-      </div>
-      <div class="card">
-        <h3>What it honestly does not capture</h3>
-        <div class="concede">
-          <strong>The illiquidity premium.</strong> Whatever extra return investors earn specifically
-          for locking capital up cannot be replicated by liquid instruments — replication targets the
-          <em>return profile</em>, not the lock-up compensation.
-          <br><br>
-          <strong>Manager selection.</strong> Dispersion between top- and bottom-quartile PE managers
-          is enormous; GSPE deliberately delivers the asset-class return, not access to any specific
-          GP&rsquo;s alpha, deal flow or operational value-add.
-          <br><br>
-          <strong>Full mark-to-market volatility.</strong> The tracker will look more volatile
-          day-to-day than smoothed private NAVs — that is a feature (honest pricing), but it changes
-          the reported-risk optics some allocators are used to.
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================= TAB 5 ============================= -->
-  <section class="tab" id="tab5">
-    <h2>My Proposal: optimise the basket for executable liquidity, not just return fit</h2>
-    <p class="lede">
-      An original extension, clearly labelled as such. Replication optimisers typically minimise
-      tracking error to the target return profile. I would add a <strong>liquidity-scoring layer</strong>
-      that ranks candidate proxy names by basket tradability and tilts the replication toward the most
-      <em>tradable</em> expression of the same return profile.
-    </p>
-
-    <div class="card">
-      <h3>Mechanism <span class="illustrative-tag">Original proposal — illustrative numbers</span></h3>
-      <div class="grid-2">
-        <div>
-          <div class="step-cards">
-            <div class="step-card">
-              <div class="n">1</div>
-              <div>
-                <h4>Score every candidate name</h4>
-                <p>Composite liquidity score per stock from: quoted <strong>bid–ask spread</strong> (bps),
-                <strong>average daily volume</strong> in dollars, and <strong>listing depth</strong>
-                (order-book size at touch, venue count, index-membership flow). Standardise each input
-                cross-sectionally, combine with fixed weights, re-score monthly.</p>
-              </div>
-            </div>
-            <div class="step-card">
-              <div class="n">2</div>
-              <div>
-                <h4>Tilt the optimiser</h4>
-                <p>Instead of <em>minimise TE</em>, solve <em>minimise TE &minus; &lambda; &times; basket
-                liquidity score</em>, subject to a hard tracking-error budget. &lambda; sets how hard the
-                basket leans toward tradable names; the TE budget guarantees the return profile is preserved.</p>
-              </div>
-            </div>
-            <div class="step-card">
-              <div class="n accent">3</div>
-              <div>
-                <h4>Substitute like-for-like</h4>
-                <p>Where two names carry near-identical factor exposure (same sector, size, style),
-                the score breaks the tie toward the cheaper-to-trade one. Liquidity is bought where it
-                is nearly free in fit terms — not by abandoning the profile.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div>
-          <table class="data">
-            <thead><tr>
-              <th>Candidate</th><th class="num">Spread (bps)</th><th class="num">ADV ($m)</th><th class="num">Depth</th><th class="num">Liq. score</th>
-            </tr></thead>
-            <tbody>
-              <tr class="hl"><td>Large-cap semis A</td><td class="num">1.2</td><td class="num">4,800</td><td class="num">0.95</td><td class="num">0.97</td></tr>
-              <tr class="hl"><td>Mega-cap software B</td><td class="num">1.5</td><td class="num">3,100</td><td class="num">0.93</td><td class="num">0.94</td></tr>
-              <tr><td>Mid-cap growth C</td><td class="num">6.8</td><td class="num">240</td><td class="num">0.61</td><td class="num">0.58</td></tr>
-              <tr><td>Recent IPO D</td><td class="num">11.4</td><td class="num">95</td><td class="num">0.44</td><td class="num">0.37</td></tr>
-              <tr><td>Small-cap growth E</td><td class="num">18.9</td><td class="num">32</td><td class="num">0.28</td><td class="num">0.19</td></tr>
-            </tbody>
-          </table>
-          <p class="diagram-note">
-            Highlighted rows: where factor exposure is equivalent, the optimiser prefers these names.
-            All figures illustrative — the point is the ranking machinery, not the specific values.
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <h3>The trade-off, made explicit <span class="illustrative-tag">Modelled, illustrative</span></h3>
-        <div class="chart-wrap" id="chartFrontier"></div>
-        <div class="legend" id="chartFrontierLegend"></div>
-        <p class="diagram-note">
-          Moving along the frontier from &lambda;=0: a <strong>marginally looser return fit</strong>
-          (tracking error rises tens of basis points) buys <strong>materially better executability</strong>
-          (basket liquidity score rises steeply at first). The knee of the curve is the sensible
-          operating point; beyond it, liquidity gains flatten while fit degrades.
-        </p>
-      </div>
-      <div class="card">
-        <h3>How I would validate it</h3>
-        <ul class="tight">
-          <li><strong>Historical tracking-error analysis.</strong> Backtest the liquidity-tilted basket against the untitled baseline over multiple regimes (2020 drawdown, 2022 rate shock, quiet markets). Confirm realised TE stays inside the budget and the fit loss is genuinely marginal.</li>
-          <li><strong>Turnover and cost analysis.</strong> Measure rebalance turnover and estimated implementation cost (spread + impact) for both baskets. The tilted basket should show materially lower all-in trading cost — that saving is real return, and partially offsets the TE give-up.</li>
-          <li><strong>Stress executability.</strong> Model liquidation of a large position in both baskets under stressed depth (e.g. halved ADV, doubled spreads). The tilted basket should exit faster and at lower cost — the scenario in which this layer earns its keep.</li>
-          <li><strong>Capacity mapping.</strong> Estimate maximum vehicle size at acceptable daily participation rates. The liquidity tilt should raise strategy capacity — directly relevant to an index designed to scale.</li>
-        </ul>
-        <div class="callout">
-          <strong>Why this fits the GSPE thesis:</strong> the product&rsquo;s core promise is liquidity
-          without mismatch. Optimising the basket for <em>executable</em> liquidity — not just return
-          fit — hardens exactly the property the product is sold on.
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================= TAB 6 ============================= -->
-  <section class="tab" id="tab6">
-    <h2>Live Model: a factor-based replication of OPAI.PVT</h2>
-    <p class="lede">
-      Yahoo Finance now publishes <strong>OPAI.PVT</strong> — a private-market mark series for OpenAI
-      (instrument type <em>PRIVATE_COMPANY</em>). It is exactly the step function from tab 01, live:
-      daily rows, but only ~59 distinct prices in 3.5 years — marks, not trades. Below, a factor model
-      attempts to replicate it with liquid instruments. Every factor is adjustable; the model NAV ticks
-      forward day by day over the real history.
-    </p>
-
-    <div class="card">
-      <h3>Model vs. market — all series normalised to 100 <span class="live-tag" id="t6DataTag">Real data — Yahoo Finance snapshot</span></h3>
-      <div class="model-layout">
-        <div class="ctrl-panel">
-          <div class="factor-ctrl">
-            <div class="fc-head"><label>&alpha; — idiosyncratic drift</label><span class="fc-val" id="v_alpha"></span></div>
-            <input type="range" id="s_alpha" min="-20" max="80" step="1" value="30">
-            <div class="fc-sub">Annualised growth not explained by any factor — the private-company story itself.</div>
-          </div>
-          <div class="factor-ctrl">
-            <div class="fc-head"><label>&beta; — AI ETF (AIQ)</label><span class="fc-val" id="v_bAIQ"></span></div>
-            <input type="range" id="s_bAIQ" min="-1.5" max="2.5" step="0.05" value="0.35">
-            <div class="fc-sub">Exposure to listed AI &amp; technology moves.</div>
-          </div>
-          <div class="factor-ctrl">
-            <div class="fc-head"><label>&beta; — MSCI World (URTH)</label><span class="fc-val" id="v_bURTH"></span></div>
-            <input type="range" id="s_bURTH" min="-1.5" max="2.5" step="0.05" value="0.15">
-            <div class="fc-sub">Broad global-equity market beta.</div>
-          </div>
-          <div class="factor-ctrl">
-            <div class="fc-head"><label>&beta; — Listed PE (PSP)</label><span class="fc-val" id="v_bPSP"></span></div>
-            <input type="range" id="s_bPSP" min="-1.5" max="2.5" step="0.05" value="0.1">
-            <div class="fc-sub">Exposure to listed private-equity managers.</div>
-          </div>
-          <div class="factor-ctrl">
-            <div class="fc-head"><label>&sigma; — idiosyncratic vol</label><span class="fc-val" id="v_idio"></span></div>
-            <input type="range" id="s_idio" min="0" max="60" step="1" value="12">
-            <div class="fc-sub">Annualised company-specific noise (seeded, reproducible).</div>
-          </div>
-          <div class="factor-ctrl">
-            <div class="fc-head"><label>Backtest horizon</label><span class="fc-val" id="v_cad"></span></div>
-            <input type="range" id="s_cad" min="5" max="63" step="1" value="21">
-            <div class="fc-sub">Model vs. OPAI.PVT returns are compared every N trading days — daily comparison is meaningless against stale marks.</div>
-          </div>
-          <div style="display:flex; gap:10px; align-items:center; margin-top:4px;">
-            <button class="reset-link" id="btnFit" style="font-weight:600;">Fit to data (OLS)</button>
-            <button class="reset-link" id="btnDefaults">Reset defaults</button>
-          </div>
-          <div class="fc-sub" id="fitNote" style="margin-top:8px;"></div>
-        </div>
-        <div>
-          <div class="transport">
-            <button id="btnPlay">&#9654;&nbsp; Play</button>
-            <button id="btnReset" class="secondary">Reset</button>
-            <span class="tick-date" id="tickDate">&mdash;</span>
-            <span class="speed">speed
-              <select id="speedSel">
-                <option value="2">2 d/tick</option>
-                <option value="5" selected>5 d/tick</option>
-                <option value="10">10 d/tick</option>
-                <option value="21">21 d/tick</option>
-              </select>
-            </span>
-            <span class="speed" style="flex:1; min-width:140px;">
-              <input type="range" id="scrub" min="1" max="100" value="100" style="margin:0;">
-            </span>
-          </div>
-          <div class="chart-wrap" id="chartModel"></div>
-          <div class="legend" id="modelToggles" style="margin-top:12px;"></div>
-          <div class="fit-metrics" id="fitMetrics"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <h3>What the backtest actually shows</h3>
-        <ul class="tight">
-          <li><strong>Daily factor regression fails completely (R&sup2; &asymp; 0.00).</strong> OPAI.PVT is flat for weeks then jumps — marks do not respond to daily market moves, so daily betas are unidentifiable. This is tab 01&rsquo;s stale-marks problem, measured on real data.</li>
-          <li><strong>At monthly horizon a signal appears, but &alpha; dominates.</strong> Fitted idiosyncratic drift is ~40&ndash;50%/yr; factor betas are small and unstable across horizons and lags. Most of OpenAI&rsquo;s valuation path over this window is company-specific, not systematic.</li>
-          <li><strong>Implication for replication:</strong> a factor basket can carry the <em>systematic</em> part of a private name and the smoothing/cadence structure — it cannot manufacture single-name &alpha;. That is precisely why GSPE replicates a broad private-equity <em>asset class</em> (where idiosyncratic stories diversify away and region/sector/size/style dominate) rather than one company.</li>
-        </ul>
-        <div class="callout">
-          Try it: press <strong>Fit to data</strong> and watch &alpha; absorb the return while betas stay
-          small. Then set &alpha; to 0 — the factor-only model cannot keep up with the marks. One private
-          company is mostly idiosyncratic; a portfolio of thousands is mostly factors.
-        </div>
-      </div>
-      <div class="card">
-        <h3>Data &amp; method — honest labels</h3>
-        <ul class="tight">
-          <li><strong>OPAI.PVT (OpenAI), AIQ, URTH, PSP, GSPE.L:</strong> real Yahoo Finance daily closes, embedded as a snapshot (as of <span id="snapDate"></span>) so the page works offline; a live refresh is attempted at load and labelled if it succeeds.</li>
-          <li><strong>OPAI.PVT is marks, not trades</strong> — Yahoo&rsquo;s private-company pricing is derived from secondary-market and funding-round data. Treat levels as indicative.</li>
-          <li><strong>GSPE.L</strong> (the GS MSCI World PE Return Tracker UCITS ETF) only listed in Jan 2026, so it is spliced onto the chart at OPAI.PVT&rsquo;s normalised level on its first trading day and rebased from there — a splice for visual comparison, labelled as such.</li>
-          <li><strong>The model line is a model</strong> — its daily path is generated by the factor equation below, not observed anywhere. The backtest compares it to OPAI.PVT only at the chosen horizon.</li>
-          <li><strong>Model equation:</strong> &Delta;log NAV = &alpha;/252 + &beta;<sub>AIQ</sub>&middot;r<sub>AIQ</sub> + &beta;<sub>WLD</sub>&middot;r<sub>URTH</sub> + &beta;<sub>PE</sub>&middot;r<sub>PSP</sub> + &sigma;&middot;&epsilon;<sub>t</sub>.</li>
-        </ul>
-      </div>
-    </div>
-  </section>
+  </div>
 
 </main>
 
 <footer>
-  <div class="inner">
-    Prepared by Alex Runcianu as an interview follow-up. All datasets marked &ldquo;illustrative&rdquo; are
-    fictional or modelled and are labelled as such throughout; no modelled figure is presented as real market
-    data. Live market data, where shown, is fetched from Yahoo Finance at load time and labelled accordingly.
-    This document is a personal analytical exercise, not investment advice, and is not affiliated with
-    Goldman Sachs or MSCI.
+  <div class="shell">
+    Prepared by Alex Runcianu as an interview follow-up. Market data from Yahoo Finance; the model
+    series is generated by the equation shown and is labelled as a model throughout. Personal
+    analytical exercise — not investment advice; not affiliated with Goldman Sachs, MSCI or Yahoo.
   </div>
 </footer>
 
 <script>
 "use strict";
 
-/* ============================================================
-   Utilities
-   ============================================================ */
+/* ---------- utilities ---------- */
 function mulberry32(seed){
   return function(){
     seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
@@ -859,141 +354,24 @@ function mulberry32(seed){
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-function gauss(rng){ // Box-Muller
+function gauss(rng){
   let u = 0, v = 0;
   while(u === 0) u = rng();
   while(v === 0) v = rng();
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 const DAY = 86400000;
-function d(s){ return new Date(s + "T00:00:00Z").getTime(); }
 function fmtDate(t){
   const dt = new Date(t);
   const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   return m[dt.getUTCMonth()] + " " + dt.getUTCFullYear();
 }
-function fmtBn(v){
-  if(v >= 1) return "$" + v.toFixed(v >= 10 ? 1 : 2) + "bn";
-  return "$" + Math.round(v * 1000) + "m";
-}
 function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
 
-const TODAY = d("2026-07-20");
-
-/* ============================================================
-   Illustrative data — fictional companies, clearly labelled
-   ============================================================ */
-const COMPANIES = {
-  aurora: {
-    name: "Aurora Compute",
-    desc: "illustrative late-stage AI infrastructure",
-    seed: 1101,
-    vol: 0.55, // annualised log-vol used for the modelled bridge
-    rounds: [
-      { date: d("2019-03-12"), label: "Series A",           v: 0.12 },
-      { date: d("2020-01-28"), label: "Series B",           v: 0.45 },
-      { date: d("2020-11-05"), label: "Series C",           v: 1.8  },
-      { date: d("2021-09-14"), label: "Series D",           v: 6.5  },
-      { date: d("2022-10-20"), label: "Internal mark-down", v: 4.2  },
-      { date: d("2023-08-02"), label: "Secondary sale",     v: 5.1  },
-      { date: d("2024-06-18"), label: "Series E",           v: 9.0  },
-      { date: d("2025-05-07"), label: "Tender offer",       v: 12.5 }
-    ]
-  },
-  helix: {
-    name: "Helix Bio",
-    desc: "illustrative clinical-stage biotech",
-    seed: 2202,
-    vol: 0.60,
-    rounds: [
-      { date: d("2019-06-04"), label: "Series A",           v: 0.08 },
-      { date: d("2020-09-22"), label: "Series B",           v: 0.35 },
-      { date: d("2021-11-30"), label: "Series C",           v: 1.1  },
-      { date: d("2022-12-08"), label: "Internal mark-down", v: 0.75 },
-      { date: d("2024-03-15"), label: "Series D",           v: 1.6  },
-      { date: d("2025-09-10"), label: "Secondary sale",     v: 1.9  }
-    ]
-  },
-  meridian: {
-    name: "Meridian Fintech",
-    desc: "illustrative growth-stage payments",
-    seed: 3303,
-    vol: 0.50,
-    rounds: [
-      { date: d("2019-02-19"), label: "Series B",             v: 0.6 },
-      { date: d("2020-07-08"), label: "Series C",             v: 2.4 },
-      { date: d("2021-06-23"), label: "Series D",             v: 8.0 },
-      { date: d("2022-08-11"), label: "Down round (Ser. E)",  v: 3.5 },
-      { date: d("2023-10-05"), label: "Secondary sale",       v: 4.4 },
-      { date: d("2025-01-29"), label: "Series F",             v: 6.8 }
-    ]
-  }
-};
-
-/* Brownian-bridge interpolation in log space between valuation anchors.
-   Modelled, illustrative — deterministic via seeded RNG. */
-function buildBridge(company){
-  const rng = mulberry32(company.seed);
-  const pts = [];
-  const rounds = company.rounds;
-  const sigmaDaily = company.vol / Math.sqrt(252);
-  for(let i = 0; i < rounds.length - 1; i++){
-    const a = rounds[i], b = rounds[i + 1];
-    const nDays = Math.round((b.date - a.date) / DAY);
-    const step = 3; // every 3 days keeps point counts sane
-    const n = Math.max(2, Math.floor(nDays / step));
-    const la = Math.log(a.v), lb = Math.log(b.v);
-    // random walk, then pin endpoints (bridge)
-    const walk = [0];
-    for(let k = 1; k <= n; k++) walk.push(walk[k-1] + gauss(rng) * sigmaDaily * Math.sqrt(step));
-    const endW = walk[n];
-    for(let k = 0; k < n; k++){
-      const f = k / n;
-      const lv = la + f * (lb - la) + (walk[k] - f * endW) * 0.9;
-      pts.push({ t: a.date + k * step * DAY, v: Math.exp(lv) });
-    }
-  }
-  const last = rounds[rounds.length - 1];
-  pts.push({ t: last.date, v: last.v });
-  return pts;
-}
-
-/* Liquid proxy series: tracks the bridge with independent daily noise
-   (tracking error), rescaled to the same anchors. Modelled, illustrative. */
-function buildProxy(company, bridge){
-  const rng = mulberry32(company.seed + 77);
-  const teDaily = 0.045 / Math.sqrt(252) * 8; // visible but modest divergence
-  const pts = [];
-  let drift = 0;
-  for(let i = 0; i < bridge.length; i++){
-    drift += gauss(rng) * teDaily;
-    drift *= 0.985; // mean-reverting divergence, as rebalancing pulls it back
-    pts.push({ t: bridge[i].t, v: bridge[i].v * Math.exp(drift) });
-  }
-  return pts;
-}
-
-/* Illustrative daily equity basket (fallback when live fetch unavailable). */
-function buildIllustrativeBasket(){
-  const rng = mulberry32(9090);
-  const start = d("2019-03-12");
-  const pts = [];
-  let lv = Math.log(100);
-  const sigma = 0.28 / Math.sqrt(252);
-  const mu = 0.14 / 252;
-  for(let t = start; t <= TODAY; t += 2 * DAY){
-    lv += mu * 2 + gauss(rng) * sigma * Math.sqrt(2);
-    pts.push({ t: t, v: Math.exp(lv) });
-  }
-  return pts;
-}
-
-/* ============================================================
-   Generic SVG chart renderer
-   ============================================================ */
+/* ---------- SVG chart ---------- */
 function drawChart(el, cfg){
-  const W = cfg.width || 980, H = cfg.height || 360;
-  const m = { l: 62, r: 20, t: 18, b: 34 };
+  const W = cfg.width || 980, H = cfg.height || 400;
+  const m = { l: 54, r: 18, t: 16, b: 32 };
   const iw = W - m.l - m.r, ih = H - m.t - m.b;
 
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
@@ -1005,115 +383,47 @@ function drawChart(el, cfg){
   });
   if(cfg.xMax !== undefined && cfg.xMax > x1) x1 = cfg.xMax;
   if(cfg.xMin !== undefined && cfg.xMin < x0) x0 = cfg.xMin;
-  if(cfg.yMin !== undefined) y0 = cfg.yMin;
-  const yPad = (y1 - y0) * (cfg.yPad !== undefined ? cfg.yPad : 0.12) || 1;
-  y0 = Math.max(cfg.yMin !== undefined ? cfg.yMin : -Infinity, y0 - yPad * 0.4);
-  y1 = y1 + yPad;
+  const yPad = (y1 - y0) * 0.1 || 1;
+  y0 -= yPad * 0.4; y1 += yPad;
 
   const X = function(t){ return m.l + (t - x0) / (x1 - x0) * iw; };
   const Y = function(v){ return m.t + (1 - (v - y0) / (y1 - y0)) * ih; };
-  const yFmt = cfg.yFmt || function(v){ return v.toFixed(1); };
-  const xFmt = cfg.xFmt || fmtDate;
-
   let g = "";
 
-  // gap shading (tab 1): grey bands between event dates
-  if(cfg.shadeGaps){
-    const ev = cfg.shadeGaps;
-    for(let i = 0; i < ev.length - 1; i++){
-      const a = X(ev[i]) + 2, b = X(ev[i + 1]) - 2;
-      if(b > a) g += '<rect x="' + a.toFixed(1) + '" y="' + m.t + '" width="' + (b - a).toFixed(1) +
-        '" height="' + ih + '" fill="#8b95a1" opacity="0.07"/>';
-    }
-    const aEnd = X(ev[ev.length - 1]) + 2;
-    if(X(x1) - aEnd > 4) g += '<rect x="' + aEnd.toFixed(1) + '" y="' + m.t + '" width="' + (X(x1) - aEnd).toFixed(1) +
-      '" height="' + ih + '" fill="#8b95a1" opacity="0.07"/>';
+  for(let i = 0; i <= 5; i++){
+    const v = y0 + (y1 - y0) * i / 5, y = Y(v);
+    g += '<line x1="' + m.l + '" y1="' + y.toFixed(1) + '" x2="' + (W - m.r) + '" y2="' + y.toFixed(1) + '" stroke="#e4e7ea"/>';
+    g += '<text x="' + (m.l - 8) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="#7b8794">' + v.toFixed(0) + '</text>';
   }
-
-  // y grid + ticks
-  const nY = 5;
-  for(let i = 0; i <= nY; i++){
-    const v = y0 + (y1 - y0) * i / nY;
-    const y = Y(v);
-    g += '<line x1="' + m.l + '" y1="' + y.toFixed(1) + '" x2="' + (W - m.r) + '" y2="' + y.toFixed(1) + '" stroke="#e4e7ea" stroke-width="1"/>';
-    g += '<text x="' + (m.l - 8) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="#7b8794">' + esc(yFmt(v)) + '</text>';
+  const yr0 = new Date(x0).getUTCFullYear() + 1, yr1 = new Date(x1).getUTCFullYear();
+  for(let yy = yr0; yy <= yr1; yy++){
+    const x = X(Date.UTC(yy, 0, 1));
+    g += '<line x1="' + x.toFixed(1) + '" y1="' + m.t + '" x2="' + x.toFixed(1) + '" y2="' + (m.t + ih) + '" stroke="#eef0f3"/>';
+    g += '<text x="' + x.toFixed(1) + '" y="' + (H - 11) + '" text-anchor="middle" font-size="11" fill="#7b8794">' + yy + '</text>';
   }
-
-  // x ticks
-  let ticks = [];
-  if(cfg.xType === "num"){
-    for(let i = 0; i <= 5; i++) ticks.push(x0 + (x1 - x0) * i / 5);
-  } else {
-    const yr0 = new Date(x0).getUTCFullYear() + 1, yr1 = new Date(x1).getUTCFullYear();
-    for(let y = yr0; y <= yr1; y++) ticks.push(Date.UTC(y, 0, 1));
-  }
-  ticks.forEach(function(t){
-    const x = X(t);
-    g += '<line x1="' + x.toFixed(1) + '" y1="' + m.t + '" x2="' + x.toFixed(1) + '" y2="' + (m.t + ih) + '" stroke="#eef0f3" stroke-width="1"/>';
-    g += '<text x="' + x.toFixed(1) + '" y="' + (H - 12) + '" text-anchor="middle" font-size="11" fill="#7b8794">' +
-      esc(cfg.xType === "num" ? xFmt(t) : String(new Date(t).getUTCFullYear())) + '</text>';
-  });
-
-  // axis frame
   g += '<line x1="' + m.l + '" y1="' + (m.t + ih) + '" x2="' + (W - m.r) + '" y2="' + (m.t + ih) + '" stroke="#aab4be" stroke-width="1.2"/>';
 
-  // series
   cfg.series.forEach(function(s){
-    const col = s.color, w = s.width || 2;
-    if(s.type === "step"){
-      let p = "";
-      s.data.forEach(function(pt, i){
-        const x = X(pt.t).toFixed(1), y = Y(pt.v).toFixed(1);
-        if(i === 0) p = "M" + x + "," + y;
-        else p += "H" + x + "V" + y;
-      });
-      p += "H" + X(s.extendTo || s.data[s.data.length - 1].t).toFixed(1);
-      g += '<path d="' + p + '" fill="none" stroke="' + col + '" stroke-width="' + w + '"' +
-           (s.dash ? ' stroke-dasharray="' + s.dash + '"' : '') +
-           ' opacity="' + (s.opacity !== undefined ? s.opacity : 1) + '"/>';
-    } else if(s.type === "line"){
-      let p = "";
-      s.data.forEach(function(pt, i){
-        p += (i === 0 ? "M" : "L") + X(pt.t).toFixed(1) + "," + Y(pt.v).toFixed(1);
-      });
-      g += '<path d="' + p + '" fill="none" stroke="' + col + '" stroke-width="' + w + '"' +
-           (s.dash ? ' stroke-dasharray="' + s.dash + '"' : '') +
-           ' stroke-linejoin="round" stroke-linecap="round" opacity="' + (s.opacity !== undefined ? s.opacity : 1) + '"/>';
-    }
-    if(s.type === "points" || s.markers){
-      s.data.forEach(function(pt){
-        g += '<circle cx="' + X(pt.t).toFixed(1) + '" cy="' + Y(pt.v).toFixed(1) + '" r="' + (s.r || 4.5) +
-             '" fill="' + col + '" stroke="#fff" stroke-width="1.5"/>';
-      });
-    }
-  });
-
-  // annotations (round labels)
-  if(cfg.annotations){
-    cfg.annotations.forEach(function(a, i){
-      const x = X(a.t), y = Y(a.v);
-      const above = (i % 2 === 0);
-      const ly = above ? y - 14 : y + 22;
-      g += '<line x1="' + x.toFixed(1) + '" y1="' + y.toFixed(1) + '" x2="' + x.toFixed(1) + '" y2="' + (above ? ly + 3 : ly - 11).toFixed(1) + '" stroke="#aab4be" stroke-width="1"/>';
-      g += '<text x="' + x.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle" font-size="10.5" fill="#46525e">' + esc(a.text) + '</text>';
+    let p = "";
+    s.data.forEach(function(pt, i){
+      p += (i === 0 ? "M" : "L") + X(pt.t).toFixed(1) + "," + Y(pt.v).toFixed(1);
     });
-  }
+    g += '<path d="' + p + '" fill="none" stroke="' + s.color + '" stroke-width="' + (s.width || 2) + '"' +
+         (s.dash ? ' stroke-dasharray="' + s.dash + '"' : '') +
+         ' stroke-linejoin="round" stroke-linecap="round" opacity="' + (s.opacity !== undefined ? s.opacity : 1) + '"/>';
+  });
 
   el.innerHTML =
     '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img">' + g +
     '<rect class="hover-zone" x="' + m.l + '" y="' + m.t + '" width="' + iw + '" height="' + ih + '" fill="transparent"/></svg>' +
     '<div class="tooltip"></div>';
 
-  // hover tooltip against a designated series
-  const hs = cfg.hoverSeries !== undefined ? cfg.series[cfg.hoverSeries] : cfg.series[0];
+  const hs = cfg.hoverSeries !== undefined ? cfg.series[cfg.hoverSeries] : cfg.series[cfg.series.length - 1];
   if(hs && cfg.hoverFmt){
-    const svg = el.querySelector("svg");
-    const zone = el.querySelector(".hover-zone");
-    const tip = el.querySelector(".tooltip");
+    const svg = el.querySelector("svg"), zone = el.querySelector(".hover-zone"), tip = el.querySelector(".tooltip");
     zone.addEventListener("mousemove", function(evt){
       const r = svg.getBoundingClientRect();
-      const sx = (evt.clientX - r.left) / r.width * W;
-      const t = x0 + (sx - m.l) / iw * (x1 - x0);
+      const t = x0 + ((evt.clientX - r.left) / r.width * W - m.l) / iw * (x1 - x0);
       let best = hs.data[0], bd = Infinity;
       for(let i = 0; i < hs.data.length; i++){
         const dd = Math.abs(hs.data[i].t - t);
@@ -1128,284 +438,10 @@ function drawChart(el, cfg){
   }
 }
 
-function renderLegend(el, items){
-  el.innerHTML = items.map(function(it){
-    const cls = "swatch" + (it.dash ? " dashed" : "") + (it.dot ? " dot" : "");
-    const style = it.dot ? 'background:' + it.color : 'border-top-color:' + it.color;
-    return '<span class="li"><span class="' + cls + '" style="' + style + '"></span>' + esc(it.label) + '</span>';
-  }).join("");
-}
-
-/* ============================================================
-   Live data attempt (Yahoo Finance) with labelled fallback
-   ============================================================ */
-const state = {
-  market: null,           // {label, points:[{t,v}]} normalised basket if live fetch works
-  company: "aurora",
-  stage: "a"
-};
-
-function setBadge(mode, text){
-  const b = document.getElementById("dataBadge");
-  b.className = "badge " + mode;
-  document.getElementById("dataBadgeText").textContent = text;
-}
-
-async function tryLiveFetch(){
-  const tickers = ["ARM", "RDDT", "DDOG", "NET"];
-  const ctrl = new AbortController();
-  const timer = setTimeout(function(){ ctrl.abort(); }, 5000);
-  try{
-    const results = await Promise.allSettled(tickers.map(async function(tk){
-      const url = "https://query1.finance.yahoo.com/v8/finance/chart/" + tk + "?range=2y&interval=1d";
-      const res = await fetch(url, { signal: ctrl.signal });
-      if(!res.ok) throw new Error("HTTP " + res.status);
-      const j = await res.json();
-      const r = j.chart.result[0];
-      const ts = r.timestamp, cl = r.indicators.quote[0].close;
-      const pts = [];
-      for(let i = 0; i < ts.length; i++){
-        if(cl[i] != null) pts.push({ t: ts[i] * 1000, v: cl[i] });
-      }
-      if(pts.length < 50) throw new Error("too sparse");
-      return { ticker: tk, pts: pts };
-    }));
-    clearTimeout(timer);
-    const ok = results.filter(function(r){ return r.status === "fulfilled"; }).map(function(r){ return r.value; });
-    if(ok.length >= 2){
-      // equal-weight normalised basket on the common date range
-      const start = Math.max.apply(null, ok.map(function(s){ return s.pts[0].t; }));
-      const basket = [];
-      const ref = ok[0].pts.filter(function(p){ return p.t >= start; });
-      ref.forEach(function(p, idx){
-        let sum = 0, n = 0;
-        ok.forEach(function(s){
-          const arr = s.pts.filter(function(q){ return q.t >= start; });
-          if(arr[idx]){ sum += arr[idx].v / arr[0].v; n++; }
-        });
-        if(n === ok.length) basket.push({ t: p.t, v: 100 * sum / n });
-      });
-      if(basket.length > 50){
-        state.market = { label: "Live basket: " + ok.map(function(s){ return s.ticker; }).join(" / "), points: basket };
-        setBadge("live", "Live market data loaded (" + ok.map(function(s){ return s.ticker; }).join(", ") + ") — private-company series remain illustrative");
-        renderContrast();
-        return;
-      }
-    }
-    throw new Error("insufficient live data");
-  } catch(e){
-    clearTimeout(timer);
-    setBadge("fallback", "Live fetch unavailable (offline / CORS — expected). All series labelled illustrative.");
-  }
-}
-
-/* ============================================================
-   Tab 1 — step function + stats + contrast
-   ============================================================ */
-function renderStepChart(){
-  const c = COMPANIES[state.company];
-  const el = document.getElementById("chartStep");
-  const stepData = c.rounds.map(function(r){ return { t: r.date, v: r.v }; });
-  drawChart(el, {
-    height: 380,
-    xMax: TODAY,
-    series: [
-      { type: "step", data: stepData, color: "#16324f", width: 2.5, markers: true, r: 5, extendTo: TODAY }
-    ],
-    shadeGaps: c.rounds.map(function(r){ return r.date; }),
-    yMin: 0,
-    yFmt: fmtBn,
-    annotations: c.rounds.map(function(r){ return { t: r.date, v: r.v, text: r.label }; }),
-    hoverFmt: function(p){
-      const r = c.rounds.filter(function(x){ return x.date === p.t; })[0];
-      return "<strong>" + esc(r ? r.label : "") + "</strong> &middot; " + fmtBn(p.v) +
-        '<div class="tt-sub">' + fmtDate(p.t) + " — only real observation until the next event</div>";
-    }
-  });
-  renderLegend(document.getElementById("chartStepLegend"), [
-    { color: "#16324f", label: c.name + " — post-money valuation (step function, " + c.desc + ")" },
-    { color: "#8b95a1", label: "shaded: no observable price / no liquidity", dot: true }
-  ]);
-
-  // stats
-  const rounds = c.rounds;
-  const spanDays = Math.round((TODAY - rounds[0].date) / DAY);
-  const gaps = [];
-  for(let i = 1; i < rounds.length; i++) gaps.push((rounds[i].date - rounds[i-1].date) / DAY);
-  const avgGap = Math.round(gaps.reduce(function(a,b){ return a + b; }, 0) / gaps.length);
-  const maxGap = Math.round(Math.max.apply(null, gaps));
-  const listedObs = Math.round(spanDays / 365.25 * 252);
-  document.getElementById("stepStats").innerHTML =
-    '<div class="stat"><div class="v">' + rounds.length + '</div><div class="l">price observations in ' + (spanDays/365.25).toFixed(1) + ' years</div></div>' +
-    '<div class="stat"><div class="v">' + avgGap + ' days</div><div class="l">average gap between observations</div></div>' +
-    '<div class="stat"><div class="v">' + maxGap + ' days</div><div class="l">longest interval with zero price discovery</div></div>' +
-    '<div class="stat"><div class="v">~' + listedObs.toLocaleString() + '</div><div class="l">daily closes a listed stock printed over the same span</div></div>';
-}
-
-function renderCompanyButtons(){
-  const el = document.getElementById("companyBtns");
-  el.innerHTML = Object.keys(COMPANIES).map(function(k){
-    return '<button data-c="' + k + '" class="' + (k === state.company ? "on" : "") + '">' + esc(COMPANIES[k].name) + '</button>';
-  }).join("");
-  el.querySelectorAll("button").forEach(function(b){
-    b.addEventListener("click", function(){
-      state.company = b.getAttribute("data-c");
-      renderCompanyButtons();
-      renderStepChart();
-    });
-  });
-}
-
-function renderContrast(){
-  const el = document.getElementById("chartContrast");
-  const tag = document.getElementById("contrastTag");
-  const note = document.getElementById("contrastNote");
-  let data, label;
-  if(state.market){
-    data = state.market.points;
-    label = state.market.label + " (equal-weight, rebased to 100)";
-    tag.className = "live-tag"; tag.textContent = "Live data — Yahoo Finance";
-    note.textContent = "Fetched at page load. Every point is a real market close: continuous price discovery, tradable at every one of them.";
-  } else {
-    data = buildIllustrativeBasket();
-    label = "Illustrative listed-equity basket (rebased to 100)";
-    tag.className = "illustrative-tag"; tag.textContent = "Illustrative data";
-    note.textContent = "Live fetch was unavailable (offline / CORS), so this series is modelled and labelled illustrative. The visual point stands: a listed basket prints a real, tradable price every session.";
-  }
-  drawChart(el, {
-    height: 300,
-    series: [ { type: "line", data: data, color: "#b08d3e", width: 1.8 } ],
-    yFmt: function(v){ return v.toFixed(0); },
-    hoverFmt: function(p){
-      return "<strong>" + p.v.toFixed(1) + "</strong><div class='tt-sub'>" + fmtDate(p.t) + " — real, tradable close" + (state.market ? "" : " (illustrative)") + "</div>";
-    }
-  });
-  let legEl = el.parentElement.querySelector(".legend-contrast");
-  if(!legEl){
-    legEl = document.createElement("div");
-    legEl.className = "legend legend-contrast";
-    el.after(legEl);
-  }
-  renderLegend(legEl, [ { color: "#b08d3e", label: label } ]);
-}
-
-/* ============================================================
-   Tab 2 — staged construction
-   ============================================================ */
-const STAGE_TEXT = {
-  a: '<div class="concede"><strong>Stage A — what we actually know.</strong> Eight observations in six years. ' +
-     'Each dot is a real event (round, mark, secondary). Everything between the dots is genuinely unknown — ' +
-     'there is no price, and nothing here can be traded.</div>',
-  b: '<div class="concede"><strong>Stage B — modelled continuous path (labelled: this is a model, not data).</strong> ' +
-     'A log-space bridge conditioned on both anchors, with volatility calibrated to comparable listed names. ' +
-     'It restores the volatility that smoothed private marks hide, and yields a daily return series — but it is ' +
-     'still not tradable: you cannot buy a model.</div>',
-  c: '<div class="callout"><strong>Stage C — the liquid proxy basket makes it tradable.</strong> ' +
-     'A basket of listed equities matched on sector, stage and style, weighted to track the modelled return path. ' +
-     'The gold line is investable: real prices, real depth, daily dealing. The residual gap between grey and gold ' +
-     'is the tracking error — the honest cost of liquidity, made visible instead of hidden.</div>'
-};
-
-function renderStages(){
-  const c = COMPANIES.aurora;
-  const bridge = buildBridge(c);
-  const proxy = buildProxy(c, bridge);
-  const el = document.getElementById("chartStages");
-  const series = [];
-  const legend = [];
-
-  if(state.stage === "a"){
-    series.push({ type: "points", data: c.rounds.map(function(r){ return { t: r.date, v: r.v }; }), color: "#16324f", r: 6 });
-    legend.push({ color: "#16324f", label: "Discrete valuation marks — the only real observations", dot: true });
-  }
-  if(state.stage === "b"){
-    series.push({ type: "line", data: bridge, color: "#7b8794", width: 1.6 });
-    series.push({ type: "points", data: c.rounds.map(function(r){ return { t: r.date, v: r.v }; }), color: "#16324f", r: 5.5 });
-    legend.push({ color: "#7b8794", label: "Modelled continuous path (illustrative — a model, not a price)" });
-    legend.push({ color: "#16324f", label: "Valuation anchors", dot: true });
-  }
-  if(state.stage === "c"){
-    series.push({ type: "line", data: bridge, color: "#aab4be", width: 1.4, dash: "4 4" });
-    series.push({ type: "line", data: proxy, color: "#b08d3e", width: 2.2 });
-    series.push({ type: "points", data: c.rounds.map(function(r){ return { t: r.date, v: r.v }; }), color: "#16324f", r: 5 });
-    legend.push({ color: "#aab4be", label: "Modelled private return path (illustrative)", dash: true });
-    legend.push({ color: "#b08d3e", label: "Liquid proxy basket — tradable daily (illustrative)" });
-    legend.push({ color: "#16324f", label: "Valuation anchors", dot: true });
-  }
-
-  drawChart(el, {
-    height: 380,
-    series: series,
-    yMin: 0,
-    yFmt: fmtBn,
-    hoverSeries: state.stage === "a" ? 0 : (state.stage === "b" ? 0 : 1),
-    hoverFmt: function(p){
-      const what = state.stage === "a" ? "valuation mark" : (state.stage === "b" ? "modelled value (illustrative)" : "liquid proxy level (illustrative)");
-      return "<strong>" + fmtBn(p.v) + "</strong><div class='tt-sub'>" + fmtDate(p.t) + " — " + what + "</div>";
-    }
-  });
-  renderLegend(document.getElementById("chartStagesLegend"), legend);
-  document.getElementById("stageExplain").innerHTML = STAGE_TEXT[state.stage];
-}
-
-function wireStageButtons(){
-  const el = document.getElementById("stageBtns");
-  el.querySelectorAll("button").forEach(function(b){
-    b.addEventListener("click", function(){
-      state.stage = b.getAttribute("data-stage");
-      el.querySelectorAll("button").forEach(function(x){ x.classList.toggle("on", x === b); });
-      renderStages();
-    });
-  });
-}
-
-/* ============================================================
-   Tab 5 — trade-off frontier
-   ============================================================ */
-function renderFrontier(){
-  const el = document.getElementById("chartFrontier");
-  // Illustrative frontier: lambda from 0..2, TE rises slowly, liquidity rises fast then flattens
-  const pts = [];
-  for(let i = 0; i <= 40; i++){
-    const lam = i / 20;
-    const liq = 0.42 + 0.52 * (1 - Math.exp(-1.8 * lam));       // basket liquidity score
-    const te = 85 + 95 * Math.pow(lam / 2, 1.7);                 // tracking error, bps
-    pts.push({ t: liq, v: te, lam: lam });
-  }
-  const markers = [0, 0.5, 1.0, 2.0].map(function(lam){
-    let best = pts[0];
-    pts.forEach(function(p){ if(Math.abs(p.lam - lam) < Math.abs(best.lam - lam)) best = p; });
-    return best;
-  });
-  drawChart(el, {
-    height: 320,
-    xType: "num",
-    series: [
-      { type: "line", data: pts, color: "#16324f", width: 2.2 },
-      { type: "points", data: markers, color: "#b08d3e", r: 5.5 }
-    ],
-    yFmt: function(v){ return Math.round(v) + " bps"; },
-    xFmt: function(v){ return v.toFixed(2); },
-    yPad: 0.2,
-    hoverSeries: 0,
-    hoverFmt: function(p){
-      return "<strong>&lambda; = " + p.lam.toFixed(2) + "</strong><div class='tt-sub'>basket liquidity score " +
-        p.t.toFixed(2) + " &middot; tracking error ~" + Math.round(p.v) + " bps (illustrative)</div>";
-    }
-  });
-  renderLegend(document.getElementById("chartFrontierLegend"), [
-    { color: "#16324f", label: "Fit-vs-executability frontier: x = basket liquidity score, y = tracking error (bps, illustrative)" },
-    { color: "#b08d3e", label: "Operating points at \u03BB = 0, 0.5, 1.0, 2.0", dot: true }
-  ]);
-}
-
-/* ============================================================
-   Tab 6 — factor-based OPAI.PVT replication model
-   Real Yahoo Finance data embedded below (snapshot); a live
-   refresh is attempted at load and labelled if it succeeds.
-   ============================================================ */
+/* ---------- embedded market data (real, Yahoo Finance) ---------- */
 const EMBEDDED_MARKET_DATA = {"asOf":"2026-07-20","series":{"OPAI.PVT":{"currency":"USD","name":"OpenAI","pts":[[19360,150.0],[19361,150.0],[19362,150.0],[19363,150.0],[19366,150.0],[19367,150.0],[19368,150.0],[19369,150.0],[19370,150.0],[19374,150.0],[19375,150.0],[19376,150.0],[19377,150.0],[19380,150.0],[19381,150.0],[19382,150.0],[19383,150.0],[19384,150.0],[19387,150.0],[19388,150.0],[19389,150.0],[19390,150.0],[19391,150.0],[19394,150.0],[19395,150.0],[19396,150.0],[19397,150.0],[19398,150.0],[19401,150.0],[19402,150.0],[19403,150.0],[19404,150.0],[19405,150.0],[19409,150.0],[19410,150.0],[19411,150.0],[19412,150.0],[19415,150.0],[19416,150.0],[19417,150.0],[19418,150.0],[19419,150.0],[19422,150.0],[19423,150.0],[19424,150.0],[19425,150.0],[19426,150.0],[19429,150.0],[19430,150.0],[19431,150.0],[19432,150.0],[19433,150.0],[19436,150.0],[19437,150.0],[19438,150.0],[19439,150.0],[19440,150.0],[19443,150.0],[19444,150.0],[19445,150.0],[19446,150.0],[19447,150.0],[19450,150.0],[19451,150.0],[19452,150.0],[19453,150.0],[19457,150.0],[19458,150.0],[19459,150.0],[19460,150.0],[19461,150.0],[19464,150.0],[19465,150.0],[19466,150.0],[19467,150.0],[19468,150.0],[19471,150.0],[19472,150.0],[19473,150.0],[19474,150.0],[19475,150.0],[19478,150.0],[19479,150.0],[19480,150.0],[19481,150.0],[19482,150.0],[19485,150.0],[19486,150.0],[19487,150.0],[19488,150.0],[19489,150.0],[19492,150.0],[19493,150.0],[19494,150.0],[19495,150.0],[19496,150.0],[19499,150.0],[19500,150.0],[19501,150.0],[19502,150.0],[19503,150.0],[19507,150.0],[19508,150.0],[19509,150.0],[19510,150.0],[19513,150.0],[19514,150.0],[19515,150.0],[19516,150.0],[19517,150.0],[19520,150.0],[19521,150.0],[19522,150.0],[19523,150.0],[19524,150.0],[19528,150.0],[19529,150.0],[19530,150.0],[19531,150.0],[19534,150.0],[19535,150.0],[19536,150.0],[19537,150.0],[19538,150.0],[19541,150.0],[19543,150.0],[19544,150.0],[19545,150.0],[19548,150.0],[19549,150.0],[19550,150.0],[19551,150.0],[19552,150.0],[19555,150.0],[19556,150.0],[19557,150.0],[19558,150.0],[19559,150.0],[19562,150.0],[19563,150.0],[19564,150.0],[19565,150.0],[19566,150.0],[19569,150.0],[19570,150.0],[19571,150.0],[19572,150.0],[19573,150.0],[19576,150.0],[19577,150.0],[19578,150.0],[19579,150.0],[19580,150.0],[19583,150.0],[19584,150.0],[19585,150.0],[19586,150.0],[19587,150.0],[19590,150.0],[19591,150.0],[19592,150.0],[19593,150.0],[19594,150.0],[19597,150.0],[19598,150.0],[19599,150.0],[19600,150.0],[19601,150.0],[19605,150.0],[19606,150.0],[19607,150.0],[19608,150.0],[19611,150.0],[19612,150.0],[19613,150.0],[19614,150.0],[19615,150.0],[19618,150.0],[19619,150.0],[19620,150.0],[19621,150.0],[19622,150.0],[19625,150.0],[19626,150.0],[19627,150.0],[19628,150.0],[19629,150.0],[19632,150.0],[19633,150.0],[19634,150.0],[19635,150.0],[19636,150.0],[19639,150.0],[19640,150.0],[19641,150.0],[19642,150.0],[19643,150.0],[19646,150.0],[19647,150.0],[19648,150.0],[19649,150.0],[19650,150.0],[19653,150.0],[19654,150.0],[19655,150.0],[19656,150.0],[19657,150.0],[19660,150.0],[19661,150.0],[19662,150.0],[19663,150.0],[19664,150.0],[19667,150.0],[19668,150.0],[19669,150.0],[19670,150.0],[19671,150.0],[19674,150.0],[19675,150.0],[19676,150.0],[19677,150.0],[19678,150.0],[19681,150.0],[19682,150.0],[19683,150.0],[19685,150.0],[19688,150.0],[19689,150.0],[19690,150.0],[19691,150.0],[19692,150.0],[19695,150.0],[19696,150.0],[19697,150.0],[19698,150.0],[19699,150.0],[19702,150.0],[19703,150.0],[19704,150.0],[19705,150.0],[19706,150.0],[19709,150.0],[19710,150.0],[19711,150.0],[19712,150.0],[19713,150.0],[19717,150.0],[19718,150.0],[19719,150.0],[19720,150.0],[19724,150.0],[19725,150.0],[19726,150.0],[19727,150.0],[19730,150.0],[19731,150.0],[19732,150.0],[19733,150.0],[19734,150.0],[19738,150.0],[19739,150.0],[19740,150.0],[19741,150.0],[19744,150.0],[19745,150.0],[19746,150.0],[19747,150.0],[19748,150.0],[19751,150.0],[19752,150.0],[19753,150.0],[19754,150.0],[19755,150.0],[19758,150.0],[19759,150.0],[19760,150.0],[19761,150.0],[19762,150.0],[19765,150.0],[19766,150.0],[19767,150.0],[19768,150.0],[19769,150.0],[19773,150.0],[19774,150.0],[19775,150.0],[19776,150.0],[19779,150.0],[19780,150.0],[19781,150.0],[19782,150.0],[19783,150.0],[19786,150.0],[19787,150.0],[19788,150.0],[19789,150.0],[19790,150.0],[19793,150.0],[19794,150.0],[19795,150.0],[19796,150.0],[19797,150.0],[19800,150.0],[19801,150.0],[19802,150.0],[19803,150.0],[19804,150.0],[19807,150.0],[19808,150.0],[19809,180.0],[19810,180.0],[19814,180.0],[19815,180.0],[19816,180.0],[19817,180.0],[19818,180.0],[19821,180.0],[19822,180.0],[19823,180.0],[19824,180.0],[19825,180.0],[19828,180.0],[19829,180.0],[19830,180.0],[19831,180.0],[19832,180.0],[19835,180.0],[19836,180.0],[19837,180.0],[19838,180.0],[19839,180.0],[19842,180.0],[19843,180.0],[19844,180.0],[19845,180.0],[19846,180.0],[19849,180.0],[19850,180.0],[19851,180.0],[19852,180.0],[19853,180.0],[19856,180.0],[19857,180.0],[19858,180.0],[19859,180.0],[19860,180.0],[19863,180.0],[19864,180.0],[19865,180.0],[19866,180.0],[19867,180.0],[19871,180.0],[19872,180.0],[19873,180.0],[19874,180.0],[19877,180.0],[19878,180.0],[19879,180.0],[19880,180.0],[19881,180.0],[19884,180.0],[19885,180.0],[19886,180.0],[19887,177.68],[19888,177.68],[19891,177.68],[19892,177.68],[19894,177.68],[19895,177.68],[19898,177.68],[19899,177.68],[19900,177.68],[19901,177.68],[19902,177.68],[19905,177.68],[19906,177.68],[19907,177.68],[19909,177.68],[19912,177.68],[19913,177.68],[19914,177.68],[19915,177.68],[19916,177.68],[19919,177.68],[19920,177.68],[19921,177.68],[19922,177.68],[19923,177.68],[19926,177.68],[19927,177.68],[19928,177.68],[19929,177.68],[19930,177.68],[19933,177.68],[19934,177.68],[19935,177.68],[19936,177.68],[19937,177.68],[19940,177.68],[19941,207.58],[19942,207.58],[19943,207.58],[19944,207.58],[19947,207.58],[19948,207.58],[19949,207.58],[19950,207.58],[19951,207.58],[19954,207.58],[19955,207.58],[19956,207.58],[19957,207.58],[19958,207.58],[19961,207.58],[19962,207.58],[19963,207.58],[19964,207.58],[19965,207.58],[19969,207.58],[19970,207.58],[19971,207.58],[19972,207.58],[19975,207.58],[19976,207.58],[19977,207.58],[19978,207.58],[19979,207.58],[19982,207.58],[19983,207.58],[19984,207.58],[19985,207.58],[19986,207.58],[19989,207.58],[19990,207.58],[19991,207.58],[19992,207.58],[19993,207.58],[19996,207.58],[19997,207.58],[19998,207.58],[19999,207.58],[20000,207.58],[20003,207.58],[20004,207.58],[20005,207.58],[20006,207.58],[20007,207.58],[20010,207.58],[20011,207.58],[20012,207.58],[20013,207.1],[20014,206.92],[20017,206.92],[20018,206.88],[20019,206.84],[20020,206.87],[20021,206.87],[20024,206.87],[20025,206.86],[20026,206.86],[20027,206.85],[20028,206.85],[20031,206.85],[20032,206.85],[20033,206.71],[20034,206.71],[20035,206.71],[20038,206.71],[20039,206.71],[20040,206.71],[20041,206.71],[20042,206.71],[20045,206.71],[20046,206.71],[20047,206.71],[20048,206.72],[20049,206.72],[20052,206.72],[20053,206.72],[20054,206.72],[20056,210.0],[20059,210.0],[20060,210.0],[20061,210.0],[20062,210.0],[20063,210.0],[20066,210.0],[20067,210.0],[20068,210.0],[20069,206.64],[20070,206.64],[20073,206.64],[20074,206.64],[20075,206.64],[20076,206.64],[20077,206.64],[20080,206.64],[20081,206.64],[20083,206.64],[20084,206.64],[20087,206.64],[20088,206.64],[20090,206.64],[20091,206.64],[20094,206.64],[20095,206.64],[20096,206.64],[20098,206.64],[20101,206.64],[20102,206.64],[20103,206.64],[20104,206.64],[20105,206.64],[20109,206.64],[20110,206.64],[20111,206.64],[20112,206.64],[20115,206.64],[20116,206.64],[20117,206.64],[20118,206.64],[20119,206.64],[20122,206.64],[20123,206.64],[20124,206.64],[20125,206.64],[20126,206.64],[20129,206.64],[20130,206.64],[20131,206.64],[20132,206.64],[20133,206.64],[20137,206.64],[20138,206.64],[20139,206.64],[20140,206.64],[20143,206.64],[20144,206.64],[20145,206.64],[20146,206.64],[20147,206.64],[20150,206.64],[20151,206.64],[20152,206.64],[20153,206.64],[20154,206.64],[20157,206.64],[20158,206.64],[20159,206.64],[20160,206.64],[20161,206.64],[20164,206.64],[20165,206.64],[20166,206.64],[20167,206.64],[20168,206.64],[20171,206.64],[20172,206.64],[20173,206.64],[20174,206.64],[20175,206.64],[20178,206.64],[20179,306.86],[20180,306.86],[20181,306.86],[20182,306.86],[20185,306.86],[20186,306.86],[20187,306.86],[20188,331.41],[20189,331.41],[20192,331.41],[20193,331.41],[20194,331.41],[20195,331.41],[20199,331.41],[20200,331.41],[20201,331.41],[20202,331.45],[20203,331.5],[20206,331.56],[20207,331.61],[20208,331.63],[20209,331.73],[20210,331.81],[20213,331.89],[20214,331.98],[20215,332.02],[20216,332.06],[20217,332.07],[20220,332.07],[20221,332.03],[20222,332.03],[20223,332.03],[20224,332.03],[20227,332.03],[20228,332.03],[20229,332.03],[20230,332.03],[20231,332.03],[20235,332.03],[20236,332.03],[20237,332.03],[20238,332.03],[20241,332.03],[20242,332.03],[20243,332.03],[20244,332.03],[20245,332.03],[20248,332.03],[20249,332.03],[20250,332.03],[20251,332.03],[20252,332.03],[20255,332.03],[20256,332.03],[20257,332.03],[20259,332.03],[20262,332.03],[20263,332.03],[20264,332.03],[20265,332.03],[20266,332.03],[20269,332.03],[20270,332.03],[20271,332.03],[20272,332.03],[20276,332.03],[20277,332.03],[20278,332.03],[20279,332.03],[20280,332.03],[20283,332.03],[20284,332.03],[20285,332.03],[20286,332.03],[20287,332.03],[20290,332.03],[20291,332.03],[20292,332.03],[20293,332.03],[20294,332.03],[20297,332.03],[20298,332.03],[20299,332.03],[20300,332.03],[20301,332.03],[20304,332.03],[20305,332.03],[20306,332.03],[20307,332.03],[20308,332.03],[20311,332.03],[20312,400.75],[20313,400.75],[20314,400.75],[20315,400.75],[20318,400.75],[20319,400.75],[20320,400.75],[20321,400.75],[20322,400.75],[20325,400.75],[20326,400.75],[20327,400.75],[20328,400.75],[20329,400.75],[20333,400.75],[20334,400.75],[20335,400.75],[20336,400.75],[20339,400.75],[20340,400.75],[20341,400.75],[20342,400.75],[20343,400.75],[20346,400.75],[20347,400.75],[20348,400.75],[20349,400.75],[20350,499.28],[20353,499.28],[20354,499.28],[20355,499.28],[20356,499.28],[20357,499.28],[20360,499.28],[20361,499.28],[20362,499.28],[20363,499.28],[20364,471.43],[20367,471.43],[20368,471.43],[20369,471.43],[20370,471.43],[20371,471.43],[20374,471.43],[20375,471.43],[20376,471.43],[20377,471.43],[20378,471.43],[20381,471.43],[20382,471.43],[20383,471.43],[20384,471.43],[20385,471.43],[20388,471.43],[20389,471.43],[20390,499.28],[20391,499.28],[20392,499.28],[20395,499.28],[20396,499.28],[20397,499.28],[20398,499.28],[20399,499.28],[20402,499.28],[20403,499.28],[20404,499.28],[20405,499.28],[20406,499.28],[20409,499.28],[20410,499.28],[20411,499.28],[20412,499.28],[20413,499.28],[20416,499.28],[20417,499.28],[20418,499.28],[20420,499.28],[20423,499.28],[20424,499.28],[20425,499.28],[20426,499.28],[20427,499.28],[20430,499.28],[20431,499.28],[20432,499.28],[20433,499.28],[20434,499.28],[20437,499.28],[20438,499.28],[20439,499.28],[20440,499.28],[20441,499.28],[20444,499.28],[20445,499.28],[20446,499.28],[20448,499.28],[20451,499.28],[20452,499.28],[20453,499.28],[20455,499.28],[20458,499.28],[20459,499.28],[20460,499.28],[20461,499.28],[20462,499.28],[20465,499.28],[20466,499.28],[20467,499.28],[20468,499.28],[20469,499.28],[20473,499.28],[20474,499.28],[20475,499.28],[20476,499.28],[20479,499.28],[20480,499.28],[20481,499.28],[20482,499.28],[20483,499.28],[20486,499.28],[20487,499.28],[20488,499.28],[20489,499.28],[20490,499.28],[20493,499.28],[20494,499.28],[20495,499.28],[20496,499.28],[20497,499.28],[20501,499.28],[20502,499.28],[20503,499.28],[20504,499.28],[20507,499.28],[20508,499.28],[20509,742.7],[20510,733.29],[20511,734.38],[20514,730.17],[20515,727.6],[20516,728.86],[20517,726.91],[20518,727.24],[20521,727.24],[20522,727.24],[20523,727.44],[20524,727.44],[20525,727.69],[20528,727.69],[20529,727.81],[20530,727.81],[20531,727.97],[20532,727.97],[20535,727.97],[20536,727.97],[20537,728.95],[20538,728.95],[20539,728.95],[20542,728.95],[20543,715.37],[20544,715.37],[20545,715.37],[20549,715.37],[20550,715.37],[20551,715.37],[20552,715.37],[20553,715.37],[20556,715.37],[20557,715.37],[20558,715.37],[20559,715.37],[20560,715.37],[20563,715.37],[20564,715.37],[20565,715.37],[20566,715.37],[20567,715.37],[20570,715.37],[20571,715.37],[20572,715.37],[20573,715.37],[20574,715.37],[20577,715.37],[20578,715.37],[20579,715.37],[20580,715.37],[20581,715.37],[20584,715.37],[20585,715.37],[20586,730.61],[20587,730.28],[20588,730.28],[20591,730.91],[20592,731.23],[20593,731.8],[20594,731.3],[20595,732.15],[20599,732.82],[20600,733.38],[20601,733.38],[20602,733.38],[20605,733.54],[20606,733.54],[20607,733.54],[20608,733.54],[20609,733.54],[20612,733.54],[20613,733.54],[20614,733.54],[20615,733.54],[20616,733.54],[20619,733.54],[20620,733.54],[20621,733.54],[20622,721.7],[20626,721.85],[20627,721.85],[20628,721.85],[20629,721.85],[20630,721.85],[20633,721.85],[20634,721.85],[20635,721.85],[20636,721.85],[20640,721.85],[20641,721.85],[20642,721.85],[20643,721.85],[20644,721.85],[20647,721.85],[20648,721.85],[20649,721.85],[20650,721.85],[20651,721.85]]},"GSPE.L":{"currency":"USD","name":"Goldman Sachs MSCI World Private Equity Return Tracker UCITS ETF USD Acc","pts":[[20473,9.913],[20474,10.021],[20475,10.021],[20476,10.103],[20479,10.149],[20480,10.223],[20481,10.151],[20482,9.997],[20483,9.984],[20486,10.061],[20487,10.009],[20488,9.99],[20489,9.878],[20490,10.054],[20493,10.211],[20494,10.238],[20495,10.101],[20496,9.967],[20497,10.065],[20500,10.048],[20501,10.061],[20502,10.168],[20503,10.106],[20504,10.161],[20507,10.029],[20508,10.103],[20509,10.17],[20510,10.14],[20511,10.183],[20514,10.136],[20515,9.925],[20516,10.044],[20517,9.933],[20518,9.9],[20521,9.843],[20522,10.041],[20523,9.878],[20524,9.821],[20525,9.681],[20528,9.772],[20529,9.696],[20530,9.76],[20531,9.586],[20532,9.547],[20535,9.613],[20536,9.637],[20537,9.755],[20538,9.604],[20539,9.429],[20542,9.365],[20543,9.472],[20544,9.825],[20545,9.771],[20550,9.765],[20551,10.178],[20552,10.114],[20553,10.222],[20556,10.239],[20557,10.415],[20558,10.484],[20559,10.686],[20560,10.766],[20563,10.68],[20564,10.636],[20565,10.759],[20566,10.789],[20567,10.753],[20570,10.728],[20571,10.548],[20572,10.542],[20573,10.702],[20574,10.609],[20578,10.841],[20579,11.074],[20580,11.024],[20581,11.36],[20584,11.141],[20585,10.902],[20586,11.023],[20587,11.152],[20588,10.958],[20591,10.86],[20592,10.829],[20593,11.093],[20594,11.09],[20595,11.229],[20599,11.385],[20600,11.294],[20601,11.43],[20602,11.483],[20605,11.544],[20606,11.588],[20607,11.732],[20608,11.63],[20609,11.42],[20612,11.417],[20613,11.183],[20614,11.212],[20615,11.288],[20616,11.565],[20619,11.75],[20620,11.598],[20621,11.634],[20622,11.636],[20623,11.619],[20626,11.598],[20627,11.406],[20628,11.392],[20629,11.513],[20630,11.524],[20633,11.546],[20634,11.715],[20635,11.768],[20636,11.618],[20637,11.694],[20640,11.748],[20641,11.491],[20642,11.36],[20643,11.647],[20644,11.589],[20647,11.532],[20648,11.589],[20649,11.471],[20650,11.452],[20651,11.365]]},"AIQ":{"currency":"USD","name":"Global X Artificial Intelligence & Technology ETF","pts":[[19360,20.11],[19361,20.76],[19362,20.36],[19363,20.79],[19366,21.28],[19367,21.49],[19368,21.635],[19369,21.73],[19370,22.09],[19374,22.05],[19375,21.72],[19376,21.616],[19377,22.246],[19380,22.79],[19381,22.56],[19382,22.685],[19383,23.14],[19384,23.18],[19387,22.65],[19388,22.86],[19389,23.576],[19390,24.239],[19391,23.88],[19394,23.56],[19395,23.95],[19396,23.67],[19397,23.61],[19398,23.13],[19401,23.58],[19402,23.69],[19403,23.95],[19404,23.61],[19405,23.2],[19409,22.64],[19410,22.55],[19411,22.93],[19412,22.3],[19415,22.57],[19416,22.56],[19417,22.57],[19418,22.8],[19419,23.08],[19422,23.11],[19423,22.73],[19424,22.8],[19425,22.315],[19426,21.9],[19429,22.01],[19430,22.38],[19431,22.33],[19432,22.85],[19433,22.86],[19436,22.99],[19437,23.31],[19438,23.12],[19439,23.56],[19440,23.438],[19443,23.4],[19444,23.48],[19445,23.949],[19446,24.24],[19447,24.59],[19450,24.49],[19451,24.385],[19452,23.93],[19453,24.04],[19457,24.135],[19458,24.04],[19459,23.78],[19460,24.18],[19461,24.06],[19464,24.15],[19465,24.16],[19466,23.95],[19467,23.61],[19468,23.72],[19471,23.535],[19472,22.93],[19473,23.11],[19474,23.66],[19475,23.83],[19478,23.77],[19479,23.55],[19480,23.47],[19481,23.41],[19482,23.82],[19485,23.91],[19486,23.72],[19487,23.98],[19488,23.97],[19489,23.76],[19492,24.16],[19493,24.22],[19494,24.62],[19495,25.08],[19496,25.12],[19499,25.31],[19500,24.9],[19501,24.75],[19502,25.3],[19503,26.05],[19507,26.26],[19508,26.13],[19509,26.5],[19510,26.74],[19513,26.68],[19514,26.86],[19515,26.43],[19516,26.78],[19517,27.0],[19520,27.52],[19521,27.88],[19522,28.06],[19523,28.5],[19524,28.31],[19528,28.1],[19529,27.61],[19530,27.74],[19531,27.43],[19534,27.2],[19535,27.66],[19536,27.68],[19537,27.59],[19538,27.96],[19541,28.04],[19543,28.01],[19544,27.55],[19545,27.65],[19548,27.85],[19549,28.1],[19550,28.61],[19551,29.19],[19552,29.01],[19555,29.31],[19556,29.49],[19557,29.49],[19558,28.68],[19559,28.62],[19562,28.7],[19563,28.92],[19564,28.9],[19565,28.85],[19566,29.51],[19569,29.63],[19570,29.41],[19571,28.62],[19572,28.49],[19573,28.37],[19576,28.55],[19577,28.185],[19578,27.86],[19579,27.9],[19580,27.59],[19583,27.88],[19584,27.56],[19585,27.17],[19586,26.95],[19587,26.87],[19590,27.24],[19591,27.25],[19592,27.77],[19593,27.29],[19594,27.52],[19597,27.78],[19598,28.39],[19599,28.48],[19600,28.57],[19601,28.82],[19605,28.8],[19606,28.64],[19607,28.38],[19608,28.34],[19611,28.7],[19612,28.23],[19613,28.26],[19614,28.42],[19615,27.98],[19618,27.87],[19619,27.8],[19620,27.46],[19621,26.86],[19622,26.95],[19625,26.93],[19626,26.53],[19627,26.66],[19628,26.82],[19629,26.91],[19632,27.07],[19633,26.57],[19634,26.84],[19635,26.88],[19636,27.39],[19639,27.38],[19640,27.61],[19641,27.78],[19642,27.56],[19643,27.11],[19646,27.43],[19647,27.42],[19648,26.91],[19649,26.78],[19650,26.28],[19653,26.3],[19654,26.57],[19655,25.85],[19656,25.5],[19657,25.67],[19660,26.01],[19661,26.16],[19662,26.54],[19663,27.15],[19664,27.61],[19667,27.71],[19668,27.98],[19669,28.01],[19670,27.78],[19671,28.25],[19674,28.24],[19675,29.01],[19676,29.22],[19677,29.15],[19678,29.25],[19681,29.65],[19682,29.46],[19683,29.58],[19685,29.56],[19688,29.61],[19689,29.6],[19690,29.7],[19691,29.73],[19692,29.9],[19695,29.56],[19696,29.55],[19697,29.37],[19698,29.72],[19699,29.89],[19702,30.12],[19703,30.17],[19704,30.46],[19705,30.54],[19706,30.64],[19709,30.8],[19710,31.04],[19711,30.59],[19712,31.09],[19713,31.01],[19717,31.25],[19718,31.36],[19719,31.35],[19720,31.18],[19724,30.44],[19725,30.06],[19726,29.9],[19727,29.87],[19730,30.545],[19731,30.43],[19732,30.64],[19733,30.83],[19734,30.87],[19738,30.66],[19739,30.39],[19740,30.79],[19741,31.35],[19744,31.44],[19745,31.66],[19746,31.9],[19747,32.05],[19748,31.84],[19751,32.14],[19752,31.92],[19753,31.27],[19754,31.62],[19755,32.11],[19758,32.11],[19759,32.2],[19760,32.4],[19761,32.5],[19762,32.97],[19765,32.86],[19766,32.125],[19767,32.86],[19768,33.04],[19769,32.61],[19773,32.28],[19774,32.13],[19775,33.07],[19776,33.07],[19779,33.18],[19780,33.24],[19781,32.99],[19782,33.3],[19783,33.91],[19786,33.91],[19787,33.18],[19788,33.53],[19789,34.02],[19790,33.65],[19793,33.55],[19794,34.22],[19795,33.96],[19796,33.68],[19797,33.15],[19800,33.47],[19801,33.46],[19802,33.96],[19803,34.07],[19804,34.01],[19807,33.97],[19808,33.97],[19809,34.01],[19810,33.96],[19814,34.17],[19815,33.97],[19816,34.08],[19817,33.62],[19818,33.91],[19821,33.93],[19822,34.03],[19823,33.62],[19824,34.15],[19825,33.36],[19828,32.81],[19829,32.79],[19830,32.42],[19831,32.25],[19832,31.46],[19835,31.78],[19836,32.33],[19837,32.46],[19838,32.19],[19839,32.65],[19842,32.76],[19843,32.09],[19844,31.97],[19845,32.71],[19846,33.14],[19849,33.65],[19850,33.55],[19851,33.35],[19852,33.36],[19853,33.39],[19856,33.59],[19857,33.81],[19858,34.46],[19859,34.37],[19860,34.3],[19863,34.53],[19864,34.46],[19865,34.36],[19866,34.16],[19867,34.4],[19871,34.57],[19872,34.24],[19873,33.43],[19874,33.36],[19877,33.55],[19878,33.65],[19879,34.44],[19880,34.46],[19881,34.28],[19884,34.51],[19885,34.57],[19886,35.2],[19887,35.25],[19888,35.37],[19891,35.79],[19892,35.95],[19894,35.67],[19895,35.53],[19898,35.12],[19899,35.44],[19900,35.51],[19901,35.64],[19902,35.63],[19905,35.79],[19906,36.1],[19907,36.53],[19909,36.84],[19912,36.78],[19913,36.74],[19914,37.03],[19915,36.51],[19916,36.78],[19919,36.84],[19920,36.95],[19921,35.72],[19922,35.47],[19923,35.1],[19926,35.77],[19927,35.64],[19928,34.32],[19929,34.2],[19930,34.53],[19933,34.42],[19934,33.88],[19935,35.0],[19936,34.0],[19937,32.77],[19940,31.85],[19941,32.11],[19942,32.03],[19943,33.13],[19944,33.35],[19947,33.34],[19948,34.03],[19949,34.09],[19950,34.88],[19951,35.18],[19954,35.58],[19955,35.43],[19956,35.65],[19957,35.02],[19958,35.53],[19961,35.19],[19962,35.25],[19963,34.8],[19964,34.89],[19965,35.35],[19969,34.33],[19970,34.23],[19971,34.27],[19972,33.35],[19975,33.72],[19976,34.02],[19977,34.66],[19978,35.01],[19979,35.09],[19982,35.2],[19983,35.16],[19984,35.04],[19985,36.01],[19986,35.9],[19989,36.12],[19990,36.65],[19991,36.54],[19992,37.32],[19993,37.23],[19996,37.17],[19997,36.72],[19998,37.09],[19999,36.97],[20000,37.56],[20003,37.39],[20004,37.45],[20005,37.73],[20006,37.78],[20007,37.97],[20010,38.09],[20011,37.42],[20012,37.54],[20013,37.46],[20014,37.77],[20017,37.65],[20018,37.54],[20019,37.01],[20020,37.31],[20021,37.36],[20024,37.44],[20025,37.82],[20026,37.48],[20027,36.57],[20028,36.93],[20031,36.93],[20032,37.42],[20033,38.26],[20034,39.09],[20035,38.77],[20038,38.95],[20039,38.77],[20040,38.75],[20041,38.37],[20042,37.73],[20045,37.88],[20046,38.15],[20047,38.19],[20048,38.5],[20049,38.69],[20052,38.84],[20053,38.92],[20054,38.58],[20056,38.82],[20059,39.12],[20060,39.15],[20061,39.87],[20062,39.73],[20063,40.26],[20066,40.25],[20067,39.79],[20068,40.34],[20069,40.06],[20070,40.14],[20073,40.57],[20074,40.5],[20075,39.0],[20076,38.97],[20077,39.25],[20080,39.5],[20081,39.95],[20083,39.93],[20084,39.41],[20087,38.88],[20088,38.64],[20090,38.46],[20091,39.13],[20094,39.59],[20095,38.96],[20096,38.92],[20098,38.2],[20101,38.0],[20102,38.1],[20103,38.97],[20104,38.88],[20105,39.46],[20109,40.08],[20110,40.64],[20111,40.81],[20112,40.76],[20115,39.66],[20116,40.4],[20117,40.16],[20118,40.61],[20119,40.45],[20122,40.06],[20123,40.93],[20124,41.02],[20125,41.16],[20126,40.82],[20129,41.61],[20130,41.4],[20131,41.55],[20132,42.17],[20133,42.41],[20137,42.77],[20138,42.47],[20139,42.23],[20140,41.24],[20143,40.31],[20144,39.76],[20145,40.09],[20146,38.93],[20147,39.07],[20150,38.26],[20151,38.29],[20152,39.24],[20153,38.05],[20154,38.45],[20157,36.61],[20158,36.84],[20159,37.46],[20160,36.63],[20161,37.7],[20164,38.3],[20165,37.69],[20166,38.15],[20167,37.75],[20168,37.84],[20171,38.6],[20172,38.69],[20173,37.92],[20174,37.62],[20175,36.54],[20178,36.38],[20179,36.72],[20180,36.99],[20181,34.83],[20182,32.4],[20185,32.17],[20186,31.5],[20187,35.34],[20188,33.81],[20189,34.45],[20192,34.73],[20193,34.86],[20194,33.9],[20195,33.9],[20199,33.23],[20200,34.11],[20201,35.09],[20202,36.2],[20203,36.77],[20206,36.8],[20207,36.95],[20208,36.87],[20209,37.17],[20210,38.16],[20213,38.1],[20214,37.78],[20215,37.89],[20216,38.31],[20217,38.32],[20220,39.92],[20221,40.71],[20222,40.99],[20223,40.81],[20224,40.93],[20227,40.88],[20228,40.72],[20229,40.22],[20230,40.3],[20231,39.95],[20235,40.79],[20236,40.52],[20237,40.45],[20238,40.3],[20241,40.73],[20242,40.96],[20243,41.35],[20244,41.2],[20245,41.62],[20248,41.9],[20249,42.08],[20250,42.11],[20251,42.19],[20252,41.6],[20255,42.32],[20256,41.93],[20257,41.88],[20259,41.5],[20262,41.96],[20263,43.1],[20264,43.08],[20265,43.48],[20266,43.37],[20269,43.69],[20270,43.2],[20271,43.49],[20272,44.0],[20276,43.54],[20277,43.68],[20278,43.77],[20279,43.65],[20280,43.28],[20283,43.51],[20284,43.79],[20285,43.98],[20286,44.43],[20287,44.36],[20290,44.53],[20291,44.18],[20292,44.77],[20293,44.59],[20294,44.74],[20297,44.93],[20298,44.88],[20299,44.82],[20300,44.57],[20301,43.47],[20304,44.33],[20305,44.17],[20306,44.64],[20307,44.71],[20308,44.91],[20311,44.68],[20312,45.34],[20313,45.59],[20314,45.23],[20315,45.22],[20318,45.3],[20319,44.49],[20320,44.14],[20321,43.88],[20322,44.94],[20325,44.77],[20326,44.98],[20327,45.01],[20328,45.53],[20329,45.08],[20333,44.62],[20334,44.88],[20335,45.06],[20336,45.46],[20339,46.11],[20340,46.47],[20341,46.83],[20342,47.2],[20343,47.34],[20346,47.96],[20347,48.19],[20348,48.24],[20349,48.78],[20350,49.14],[20353,49.66],[20354,49.23],[20355,49.24],[20356,48.92],[20357,48.92],[20360,49.34],[20361,49.39],[20362,49.89],[20363,50.32],[20364,50.21],[20367,51.06],[20368,50.56],[20369,51.55],[20370,51.27],[20371,48.93],[20374,50.44],[20375,49.81],[20376,50.55],[20377,50.53],[20378,50.5],[20381,51.29],[20382,51.02],[20383,50.4],[20384,51.08],[20385,51.94],[20388,53.09],[20389,53.16],[20390,53.47],[20391,52.7],[20392,53.08],[20395,53.56],[20396,51.56],[20397,52.12],[20398,51.1],[20399,50.68],[20402,52.1],[20403,51.64],[20404,51.58],[20405,50.2],[20406,50.15],[20409,49.5],[20410,48.8],[20411,48.79],[20412,47.33],[20413,47.6],[20416,49.11],[20417,49.25],[20418,49.67],[20420,50.14],[20423,50.13],[20424,50.44],[20425,50.84],[20426,50.95],[20427,51.48],[20430,51.52],[20431,51.67],[20432,52.07],[20433,51.68],[20434,50.52],[20437,49.88],[20438,49.87],[20439,48.97],[20440,49.8],[20441,50.73],[20444,51.16],[20445,51.3],[20446,51.45],[20448,51.57],[20451,51.49],[20452,51.36],[20453,50.86],[20455,51.43],[20458,52.05],[20459,52.65],[20460,52.58],[20461,52.14],[20462,52.58],[20465,53.15],[20466,52.64],[20467,52.28],[20468,52.36],[20469,52.34],[20473,50.94],[20474,51.9],[20475,52.45],[20476,52.51],[20479,52.43],[20480,53.11],[20481,53.61],[20482,53.03],[20483,51.97],[20486,52.38],[20487,51.04],[20488,49.38],[20489,48.47],[20490,50.08],[20493,50.83],[20494,50.77],[20495,50.55],[20496,49.21],[20497,49.45],[20501,48.97],[20502,49.55],[20503,49.41],[20504,49.88],[20507,48.53],[20508,49.49],[20509,50.55],[20510,50.52],[20511,50.26],[20514,50.06],[20515,48.81],[20516,49.92],[20517,49.65],[20518,49.1],[20521,49.83],[20522,49.67],[20523,49.92],[20524,48.59],[20525,48.35],[20528,49.34],[20529,49.58],[20530,48.87],[20531,48.8],[20532,47.37],[20535,48.52],[20536,47.61],[20537,47.9],[20538,46.41],[20539,45.47],[20542,44.78],[20543,46.67],[20544,47.34],[20545,47.27],[20549,47.75],[20550,47.85],[20551,49.6],[20552,49.35],[20553,49.37],[20556,50.58],[20557,51.83],[20558,52.72],[20559,53.49],[20560,54.1],[20563,53.91],[20564,53.69],[20565,54.97],[20566,53.51],[20567,55.14],[20570,55.38],[20571,54.5],[20572,55.04],[20573,55.88],[20574,56.82],[20577,57.11],[20578,58.43],[20579,60.3],[20580,59.99],[20581,62.31],[20584,62.85],[20585,61.02],[20586,62.11],[20587,62.43],[20588,61.04],[20591,60.72],[20592,60.4],[20593,61.87],[20594,62.61],[20595,62.81],[20599,65.2],[20600,65.1],[20601,66.34],[20602,67.32],[20605,69.44],[20606,70.14],[20607,69.16],[20608,68.07],[20609,62.52],[20612,64.44],[20613,63.16],[20614,61.36],[20615,63.95],[20616,64.0],[20619,66.55],[20620,64.64],[20621,64.33],[20622,66.8],[20626,67.09],[20627,63.35],[20628,63.39],[20629,64.18],[20630,63.15],[20633,64.22],[20634,65.61],[20635,63.63],[20636,61.85],[20640,63.84],[20641,62.08],[20642,62.57],[20643,63.83],[20644,63.44],[20647,61.3],[20648,61.96],[20649,61.12],[20650,59.31],[20651,58.7]]},"URTH":{"currency":"USD","name":"iShares MSCI World ETF","pts":[[19360,109.1],[19361,110.17],[19362,108.88],[19363,111.45],[19366,111.58],[19367,112.19],[19368,113.41],[19369,114.29],[19370,114.8],[19374,114.79],[19375,113.47],[19376,112.75],[19377,114.56],[19380,115.7],[19381,115.59],[19382,115.82],[19383,116.78],[19384,116.95],[19387,115.63],[19388,117.01],[19389,118.24],[19390,119.43],[19391,118.17],[19394,117.3],[19395,118.65],[19396,117.53],[19397,116.82],[19398,116.83],[19401,118.13],[19402,118.28],[19403,118.45],[19404,117.16],[19405,116.88],[19409,114.88],[19410,114.62],[19411,115.17],[19412,113.65],[19415,114.36],[19416,113.98],[19417,113.83],[19418,114.48],[19419,116.27],[19422,116.22],[19423,114.38],[19424,114.65],[19425,112.85],[19426,111.25],[19429,110.93],[19430,112.62],[19431,111.04],[19432,112.89],[19433,111.56],[19436,112.78],[19437,114.39],[19438,112.91],[19439,113.09],[19440,113.42],[19443,113.96],[19444,113.87],[19445,115.41],[19446,116.25],[19447,117.67],[19450,118.22],[19451,117.77],[19452,117.26],[19453,117.68],[19457,117.79],[19458,117.94],[19459,117.84],[19460,119.42],[19461,119.14],[19464,119.31],[19465,119.62],[19466,119.44],[19467,118.97],[19468,119.22],[19471,119.36],[19472,117.49],[19473,117.11],[19474,119.18],[19475,119.79],[19478,119.67],[19479,118.37],[19480,117.86],[19481,117.29],[19482,119.35],[19485,119.4],[19486,118.91],[19487,119.2],[19488,118.92],[19489,118.75],[19492,119.46],[19493,118.43],[19494,119.56],[19495,120.33],[19496,120.39],[19499,120.47],[19500,119.03],[19501,117.91],[19502,118.41],[19503,119.91],[19507,119.52],[19508,118.6],[19509,120.03],[19510,121.83],[19513,121.46],[19514,121.98],[19515,120.16],[19516,120.95],[19517,121.09],[19520,122.03],[19521,122.95],[19522,123.18],[19523,124.7],[19524,124.29],[19528,123.24],[19529,122.91],[19530,122.89],[19531,121.79],[19534,121.54],[19535,122.8],[19536,122.82],[19537,123.18],[19538,124.52],[19541,124.8],[19543,124.16],[19544,122.77],[19545,122.87],[19548,123.25],[19549,124.18],[19550,125.53],[19551,126.98],[19552,126.64],[19555,126.92],[19556,127.93],[19557,128.1],[19558,127.33],[19559,127.4],[19562,127.59],[19563,127.92],[19564,128.01],[19565,127.22],[19566,128.44],[19569,128.54],[19570,127.91],[19571,125.9],[19572,125.52],[19573,125.22],[19576,126.29],[19577,125.65],[19578,125.01],[19579,125.17],[19580,124.87],[19583,125.17],[19584,123.68],[19585,122.7],[19586,121.85],[19587,121.82],[19590,122.57],[19591,122.21],[19592,123.51],[19593,121.87],[19594,122.7],[19597,123.64],[19598,125.4],[19599,125.89],[19600,125.7],[19601,125.91],[19605,125.21],[19606,124.45],[19607,124.09],[19608,124.12],[19611,125.09],[19612,124.48],[19613,124.52],[19614,125.72],[19615,124.62],[19618,124.52],[19619,124.34],[19620,123.43],[19621,121.36],[19622,121.17],[19625,121.39],[19626,119.67],[19627,119.58],[19628,120.52],[19629,120.17],[19632,119.51],[19633,117.94],[19634,118.63],[19635,118.88],[19636,120.25],[19639,120.79],[19640,121.78],[19641,122.32],[19642,121.38],[19643,120.68],[19646,121.85],[19647,121.84],[19648,120.06],[19649,118.98],[19650,117.65],[19653,117.5],[19654,118.3],[19655,116.77],[19656,115.58],[19657,115.01],[19660,116.43],[19661,117.11],[19662,118.32],[19663,120.72],[19664,121.93],[19667,121.89],[19668,121.99],[19669,122.02],[19670,121.31],[19671,122.84],[19674,122.88],[19675,125.46],[19676,125.66],[19677,125.66],[19678,126.3],[19681,127.07],[19682,126.8],[19683,127.23],[19685,127.52],[19688,127.31],[19689,127.41],[19690,127.43],[19691,127.78],[19692,128.76],[19695,128.04],[19696,127.84],[19697,127.54],[19698,128.46],[19699,128.92],[19702,129.41],[19703,129.75],[19704,131.67],[19705,132.36],[19706,131.95],[19709,132.56],[19710,133.48],[19711,130.63],[19712,132.16],[19713,132.43],[19717,132.98],[19718,133.36],[19719,133.28],[19720,133.02],[19724,131.91],[19725,130.85],[19726,130.7],[19727,130.86],[19730,132.59],[19731,132.06],[19732,132.83],[19733,132.82],[19734,132.93],[19738,132.01],[19739,131.15],[19740,132.25],[19741,133.63],[19744,133.94],[19745,134.11],[19746,134.42],[19747,134.95],[19748,135.07],[19751,136.11],[19752,135.99],[19753,134.2],[19754,135.75],[19755,136.45],[19758,135.84],[19759,136.37],[19760,137.15],[19761,137.23],[19762,137.9],[19765,138.0],[19766,135.93],[19767,137.38],[19768,138.55],[19769,138.04],[19773,137.61],[19774,137.7],[19775,140.18],[19776,140.33],[19779,139.79],[19780,140.15],[19781,139.71],[19782,140.28],[19783,141.54],[19786,141.37],[19787,140.27],[19788,141.32],[19789,142.84],[19790,142.08],[19793,141.67],[19794,143.16],[19795,143.03],[19796,142.4],[19797,141.74],[19800,142.17],[19801,142.87],[19802,144.21],[19803,144.67],[19804,144.4],[19807,144.0],[19808,143.81],[19809,144.91],[19810,144.91],[19814,144.5],[19815,143.5],[19816,143.93],[19817,142.3],[19818,143.56],[19821,143.72],[19822,143.83],[19823,142.24],[19824,143.22],[19825,140.99],[19828,139.55],[19829,138.98],[19830,138.52],[19831,138.11],[19832,137.31],[19835,138.51],[19836,140.06],[19837,139.95],[19838,139.45],[19839,140.8],[19842,141.23],[19843,139.17],[19844,138.6],[19845,140.08],[19846,141.78],[19849,143.17],[19850,143.32],[19851,143.31],[19852,144.14],[19853,144.38],[19856,144.29],[19857,145.14],[19858,146.8],[19859,146.44],[19860,146.73],[19863,146.78],[19864,147.02],[19865,146.31],[19866,145.3],[19867,146.31],[19871,146.34],[19872,144.82],[19873,144.63],[19874,145.71],[19877,146.06],[19878,146.03],[19879,147.56],[19880,147.65],[19881,147.03],[19884,147.36],[19885,145.97],[19886,147.33],[19887,147.01],[19888,146.58],[19891,147.47],[19892,147.96],[19894,147.72],[19895,147.23],[19898,147.27],[19899,147.78],[19900,147.7],[19901,147.74],[19902,147.49],[19905,147.81],[19906,148.58],[19907,149.59],[19909,150.5],[19912,150.34],[19913,150.43],[19914,152.02],[19915,151.27],[19916,152.4],[19919,152.41],[19920,153.3],[19921,151.6],[19922,150.24],[19923,149.18],[19926,150.77],[19927,150.29],[19928,147.23],[19929,146.5],[19930,148.13],[19933,148.08],[19934,147.66],[19935,149.97],[19936,147.31],[19937,144.62],[19940,140.68],[19941,141.76],[19942,141.18],[19943,144.18],[19944,145.03],[19947,144.9],[19948,147.42],[19949,147.87],[19950,150.09],[19951,150.71],[19954,152.22],[19955,152.0],[19956,152.87],[19957,151.49],[19958,153.8],[19961,153.36],[19962,153.59],[19963,152.86],[19964,152.96],[19965,154.18],[19969,151.01],[19970,150.72],[19971,150.19],[19972,147.75],[19975,149.33],[19976,149.74],[19977,151.21],[19978,152.36],[19979,153.14],[19982,153.67],[19983,153.42],[19984,153.01],[19985,155.66],[19986,155.11],[19989,155.58],[19990,156.07],[19991,155.68],[19992,157.1],[19993,156.62],[19996,156.91],[19997,155.61],[19998,155.63],[19999,155.04],[20000,156.34],[20003,155.0],[20004,156.07],[20005,156.9],[20006,156.64],[20007,157.54],[20010,158.54],[20011,156.97],[20012,157.61],[20013,157.7],[20014,158.4],[20017,157.71],[20018,157.46],[20019,155.89],[20020,156.4],[20021,156.15],[20024,156.84],[20025,156.84],[20026,156.27],[20027,153.73],[20028,154.35],[20031,154.14],[20032,155.96],[20033,158.36],[20034,159.91],[20035,159.88],[20038,160.25],[20039,159.18],[20040,158.97],[20041,158.31],[20042,156.66],[20045,157.39],[20046,157.85],[20047,157.76],[20048,158.57],[20049,159.26],[20052,159.76],[20053,160.05],[20054,159.85],[20056,161.14],[20059,161.55],[20060,161.72],[20061,162.66],[20062,162.67],[20063,162.95],[20066,162.02],[20067,161.33],[20068,162.59],[20069,161.54],[20070,161.35],[20073,161.7],[20074,160.0],[20075,155.38],[20076,155.16],[20077,156.36],[20080,157.4],[20081,158.77],[20083,159.06],[20084,157.6],[20087,156.12],[20088,155.5],[20090,155.2],[20091,156.98],[20094,157.76],[20095,156.41],[20096,156.43],[20098,154.25],[20101,154.23],[20102,154.43],[20103,157.11],[20104,157.14],[20105,158.4],[20109,160.27],[20110,160.89],[20111,161.87],[20112,161.74],[20115,159.98],[20116,160.93],[20117,160.41],[20118,161.55],[20119,160.66],[20122,159.37],[20123,160.64],[20124,161.55],[20125,162.06],[20126,160.6],[20129,161.68],[20130,161.97],[20131,161.83],[20132,163.55],[20133,163.56],[20137,164.09],[20138,164.03],[20139,163.71],[20140,161.28],[20143,160.63],[20144,160.41],[20145,160.51],[20146,158.06],[20147,160.0],[20150,158.29],[20151,156.96],[20152,159.24],[20153,156.49],[20154,157.64],[20157,153.34],[20158,152.43],[20159,153.2],[20160,151.24],[20161,154.46],[20164,155.87],[20165,154.53],[20166,155.93],[20167,155.33],[20168,155.23],[20171,157.42],[20172,157.78],[20173,155.98],[20174,155.58],[20175,152.88],[20178,153.18],[20179,153.6],[20180,154.63],[20181,148.28],[20182,139.25],[20185,138.01],[20186,136.3],[20187,148.48],[20188,144.1],[20189,146.92],[20192,148.27],[20193,148.45],[20194,146.04],[20195,146.67],[20199,143.98],[20200,147.38],[20201,149.22],[20202,152.1],[20203,153.05],[20206,153.45],[20207,154.18],[20208,154.28],[20209,154.78],[20210,157.21],[20213,156.63],[20214,155.71],[20215,156.03],[20216,156.62],[20217,156.78],[20220,160.63],[20221,161.62],[20222,161.62],[20223,162.51],[20224,163.51],[20227,163.93],[20228,163.76],[20229,161.61],[20230,161.49],[20231,160.96],[20235,163.83],[20236,162.77],[20237,163.35],[20238,163.31],[20241,164.45],[20242,164.92],[20243,165.12],[20244,164.44],[20245,165.85],[20248,165.93],[20249,166.55],[20250,166.17],[20251,166.97],[20252,165.0],[20255,165.16],[20256,163.64],[20257,163.68],[20259,163.02],[20262,164.49],[20263,166.41],[20264,166.12],[20265,167.7],[20266,168.59],[20269,169.38],[20270,169.15],[20271,169.87],[20272,170.87],[20276,169.47],[20277,169.56],[20278,170.7],[20279,171.03],[20280,170.11],[20283,170.46],[20284,169.47],[20285,170.0],[20286,170.95],[20287,170.81],[20290,171.22],[20291,171.52],[20292,173.49],[20293,173.35],[20294,173.75],[20297,173.0],[20298,172.63],[20299,172.14],[20300,171.1],[20301,168.96],[20304,171.42],[20305,170.84],[20306,172.19],[20307,172.35],[20308,173.63],[20311,173.1],[20312,175.12],[20313,175.77],[20314,175.6],[20315,175.72],[20318,175.52],[20319,174.79],[20320,174.67],[20321,173.96],[20322,176.56],[20325,175.49],[20326,175.94],[20327,176.21],[20328,176.92],[20329,175.88],[20333,174.55],[20334,175.2],[20335,176.66],[20336,176.43],[20339,177.26],[20340,177.56],[20341,177.86],[20342,179.47],[20343,179.25],[20346,180.18],[20347,180.01],[20348,179.56],[20349,180.5],[20350,181.04],[20353,181.71],[20354,180.97],[20355,180.16],[20356,179.34],[20357,180.3],[20360,180.93],[20361,181.56],[20362,182.36],[20363,182.64],[20364,183.01],[20367,183.61],[20368,182.62],[20369,183.52],[20370,182.67],[20371,178.2],[20374,180.65],[20375,180.77],[20376,181.51],[20377,180.88],[20378,181.64],[20381,183.24],[20382,182.86],[20383,181.99],[20384,183.16],[20385,184.29],[20388,186.26],[20389,186.64],[20390,186.21],[20391,184.65],[20392,185.03],[20395,185.36],[20396,183.08],[20397,183.91],[20398,182.17],[20399,182.56],[20402,185.17],[20403,185.76],[20404,186.24],[20405,183.23],[20406,183.19],[20409,181.28],[20410,179.77],[20411,180.06],[20412,177.3],[20413,179.18],[20416,181.16],[20417,183.22],[20418,184.73],[20420,185.66],[20423,184.83],[20424,185.28],[20425,186.06],[20426,186.25],[20427,186.58],[20430,185.91],[20431,185.88],[20432,187.13],[20433,187.85],[20434,186.09],[20437,186.26],[20438,184.19],[20439,182.29],[20440,183.67],[20441,185.18],[20444,186.29],[20445,187.21],[20446,187.72],[20448,187.81],[20451,187.1],[20452,187.01],[20453,185.77],[20455,186.51],[20458,188.01],[20459,188.98],[20460,188.22],[20461,188.24],[20462,189.53],[20465,190.05],[20466,189.53],[20467,188.93],[20468,189.25],[20469,189.21],[20473,185.64],[20474,187.66],[20475,188.56],[20476,188.86],[20479,189.91],[20480,191.29],[20481,190.79],[20482,190.8],[20483,189.63],[20486,190.66],[20487,189.44],[20488,188.98],[20489,186.46],[20490,190.24],[20493,191.84],[20494,191.6],[20495,191.83],[20496,189.02],[20497,189.4],[20501,189.46],[20502,190.41],[20503,189.89],[20504,191.19],[20507,189.5],[20508,190.77],[20509,192.37],[20510,191.68],[20511,190.84],[20514,190.18],[20515,187.21],[20516,188.82],[20517,187.09],[20518,184.98],[20521,186.45],[20522,186.36],[20523,186.02],[20524,183.15],[20525,181.75],[20528,184.04],[20529,184.49],[20530,181.77],[20531,181.36],[20532,178.0],[20535,180.54],[20536,179.85],[20537,181.19],[20538,178.04],[20539,175.42],[20542,174.94],[20543,180.02],[20544,181.81],[20545,181.72],[20549,182.52],[20550,182.47],[20551,187.66],[20552,188.36],[20553,188.38],[20556,189.99],[20557,192.0],[20558,193.33],[20559,193.38],[20560,195.79],[20563,195.51],[20564,193.28],[20565,194.92],[20566,193.82],[20567,195.27],[20570,195.45],[20571,194.43],[20572,193.87],[20573,196.55],[20574,196.76],[20577,195.56],[20578,197.03],[20579,200.63],[20580,199.12],[20581,200.64],[20584,200.88],[20585,200.57],[20586,201.63],[20587,202.74],[20588,199.92],[20591,200.25],[20592,198.97],[20593,201.49],[20594,202.07],[20595,202.54],[20599,204.0],[20600,203.91],[20601,204.8],[20602,204.93],[20605,205.36],[20606,206.18],[20607,204.65],[20608,205.67],[20609,200.38],[20612,201.05],[20613,200.38],[20614,197.44],[20615,201.54],[20616,202.32],[20619,203.63],[20620,203.1],[20621,200.99],[20622,202.73],[20626,202.37],[20627,199.43],[20628,199.0],[20629,199.29],[20630,197.36],[20633,201.24],[20634,202.64],[20635,202.08],[20636,202.65],[20640,204.44],[20641,203.13],[20642,202.29],[20643,203.73],[20644,204.63],[20647,203.01],[20648,203.98],[20649,204.75],[20650,203.58],[20651,201.9]]},"PSP":{"currency":"USD","name":"Invesco Global Listed Private Equity ETF","pts":[[19360,47.85],[19361,49.1],[19362,48.5],[19363,49.4],[19366,50.15],[19367,50.55],[19368,51.95],[19369,52.6],[19370,52.9],[19374,53.5],[19375,52.6],[19376,51.5],[19377,52.3],[19380,53.3],[19381,53.0],[19382,52.95],[19383,54.25],[19384,54.55],[19387,53.35],[19388,53.5],[19389,54.35],[19390,56.25],[19391,55.4],[19394,54.2],[19395,54.6],[19396,54.1],[19397,54.0],[19398,53.45],[19401,54.45],[19402,54.5],[19403,54.65],[19404,54.0],[19405,54.25],[19409,52.7],[19410,52.7],[19411,53.25],[19412,52.2],[19415,53.2],[19416,53.15],[19417,53.15],[19418,53.0],[19419,53.9],[19422,53.95],[19423,52.65],[19424,53.3],[19425,51.6],[19426,49.05],[19429,48.45],[19430,49.45],[19431,47.95],[19432,48.6],[19433,47.35],[19436,47.95],[19437,49.7],[19438,48.95],[19439,48.9],[19440,48.55],[19443,49.1],[19444,48.65],[19445,49.6],[19446,50.1],[19447,50.55],[19450,50.75],[19451,50.25],[19452,49.65],[19453,50.15],[19457,50.35],[19458,50.8],[19459,50.95],[19460,51.65],[19461,51.7],[19464,51.15],[19465,51.7],[19466,51.85],[19467,51.6],[19468,51.6],[19471,51.85],[19472,50.65],[19473,50.65],[19474,51.6],[19475,52.3],[19478,52.1],[19479,50.8],[19480,51.1],[19481,50.0],[19482,51.3],[19485,51.4],[19486,50.65],[19487,51.05],[19488,51.15],[19489,50.8],[19492,51.55],[19493,50.6],[19494,51.35],[19495,51.1],[19496,51.5],[19499,51.9],[19500,51.2],[19501,50.55],[19502,50.3],[19503,51.25],[19507,51.5],[19508,51.3],[19509,51.7],[19510,52.55],[19513,52.6],[19514,53.35],[19515,53.6],[19516,54.2],[19517,54.3],[19520,54.2],[19521,54.9],[19522,54.8],[19523,54.95],[19524,54.45],[19528,52.55],[19529,52.15],[19530,51.8],[19531,51.1],[19534,51.1],[19535,51.6],[19536,51.85],[19537,52.05],[19538,52.6],[19541,52.6],[19543,51.85],[19544,51.5],[19545,52.05],[19548,52.1],[19549,52.75],[19550,53.75],[19551,55.05],[19552,55.15],[19555,55.14],[19556,55.6],[19557,56.61],[19558,56.04],[19559,55.96],[19562,55.95],[19563,56.11],[19564,56.42],[19565,55.4],[19566,55.77],[19569,56.0],[19570,55.56],[19571,54.38],[19572,54.39],[19573,54.94],[19576,55.49],[19577,54.75],[19578,54.43],[19579,54.32],[19580,53.92],[19583,53.97],[19584,53.24],[19585,52.88],[19586,52.1],[19587,52.31],[19590,52.12],[19591,51.74],[19592,52.19],[19593,51.66],[19594,51.91],[19597,52.36],[19598,53.42],[19599,53.95],[19600,53.79],[19601,53.72],[19605,53.6],[19606,53.44],[19607,53.42],[19608,53.37],[19611,53.72],[19612,53.8],[19613,53.69],[19614,53.83],[19615,54.3],[19618,53.13],[19619,53.31],[19620,53.1],[19621,52.12],[19622,51.92],[19625,52.05],[19626,51.3],[19627,51.25],[19628,51.78],[19629,51.67],[19632,50.74],[19633,49.79],[19634,50.05],[19635,50.27],[19636,51.01],[19639,50.79],[19640,51.54],[19641,51.78],[19642,51.24],[19643,50.37],[19646,51.05],[19647,50.9],[19648,49.72],[19649,48.88],[19650,48.1],[19653,48.06],[19654,48.52],[19655,47.54],[19656,47.71],[19657,47.08],[19660,48.0],[19661,48.06],[19662,48.8],[19663,50.3],[19664,51.52],[19667,50.94],[19668,51.08],[19669,51.52],[19670,51.37],[19671,51.87],[19674,51.78],[19675,53.93],[19676,54.23],[19677,53.82],[19678,54.67],[19681,55.07],[19682,54.77],[19683,55.24],[19685,55.65],[19688,55.54],[19689,55.79],[19690,56.64],[19691,56.88],[19692,57.76],[19695,56.99],[19696,56.94],[19697,57.15],[19698,57.81],[19699,57.97],[19702,57.97],[19703,58.05],[19704,59.02],[19705,61.53],[19706,61.31],[19709,60.87],[19710,61.57],[19711,60.73],[19712,61.44],[19713,61.92],[19717,62.46],[19718,62.79],[19719,62.53],[19720,62.2],[19724,60.75],[19725,59.86],[19726,59.98],[19727,59.73],[19730,60.27],[19731,59.81],[19732,59.95],[19733,59.96],[19734,59.96],[19738,59.09],[19739,58.87],[19740,59.62],[19741,60.28],[19744,60.56],[19745,60.58],[19746,60.93],[19747,61.71],[19748,62.22],[19751,62.37],[19752,62.43],[19753,61.81],[19754,62.05],[19755,61.56],[19758,60.8],[19759,61.26],[19760,61.76],[19761,62.54],[19762,62.82],[19765,63.6],[19766,61.72],[19767,62.7],[19768,63.75],[19769,63.49],[19773,63.44],[19774,63.64],[19775,63.96],[19776,63.9],[19779,64.06],[19780,64.32],[19781,63.96],[19782,64.4],[19783,64.8],[19786,64.33],[19787,63.6],[19788,64.73],[19789,65.37],[19790,65.14],[19793,65.06],[19794,65.46],[19795,65.56],[19796,64.38],[19797,64.92],[19800,63.69],[19801,63.87],[19802,64.78],[19803,65.77],[19804,65.03],[19807,65.28],[19808,65.07],[19809,65.54],[19810,65.96],[19814,65.56],[19815,65.04],[19816,65.59],[19817,64.74],[19818,65.3],[19821,65.82],[19822,66.12],[19823,64.75],[19824,65.29],[19825,63.9],[19828,63.3],[19829,62.97],[19830,62.85],[19831,62.35],[19832,62.12],[19835,62.97],[19836,64.16],[19837,63.62],[19838,63.01],[19839,63.86],[19842,64.2],[19843,63.27],[19844,63.16],[19845,63.4],[19846,63.94],[19849,64.99],[19850,65.03],[19851,64.64],[19852,64.84],[19853,65.15],[19856,65.26],[19857,65.81],[19858,67.18],[19859,66.29],[19860,66.07],[19863,66.15],[19864,66.39],[19865,65.89],[19866,65.36],[19867,66.33],[19871,66.15],[19872,64.78],[19873,65.48],[19874,65.74],[19877,65.8],[19878,65.53],[19879,66.21],[19880,65.33],[19881,64.38],[19884,65.21],[19885,64.7],[19886,65.71],[19887,64.83],[19888,64.33],[19891,64.73],[19892,64.93],[19894,65.26],[19895,64.48],[19898,61.72],[19899,61.0],[19900,60.7],[19901,60.91],[19902,61.09],[19905,60.9],[19906,61.51],[19907,61.68],[19909,62.11],[19912,61.57],[19913,61.11],[19914,62.38],[19915,63.09],[19916,63.92],[19919,63.84],[19920,64.67],[19921,64.17],[19922,63.98],[19923,63.8],[19926,64.78],[19927,64.41],[19928,63.3],[19929,63.56],[19930,64.63],[19933,64.44],[19934,64.81],[19935,65.28],[19936,63.45],[19937,61.1],[19940,58.86],[19941,59.26],[19942,59.57],[19943,60.37],[19944,60.97],[19947,60.79],[19948,61.91],[19949,62.5],[19950,63.33],[19951,63.63],[19954,64.19],[19955,63.79],[19956,64.32],[19957,64.25],[19958,65.52],[19961,65.41],[19962,65.52],[19963,64.94],[19964,64.93],[19965,65.36],[19969,63.13],[19970,63.17],[19971,63.44],[19972,62.5],[19975,63.42],[19976,63.42],[19977,64.02],[19978,65.28],[19979,66.09],[19982,67.13],[19983,67.58],[19984,67.3],[19985,69.01],[19986,68.37],[19989,68.0],[19990,68.16],[19991,67.22],[19992,68.57],[19993,68.53],[19996,68.22],[19997,67.4],[19998,67.29],[19999,67.03],[20000,68.14],[20003,67.25],[20004,67.28],[20005,67.3],[20006,67.12],[20007,67.97],[20010,68.0],[20011,67.64],[20012,68.32],[20013,69.18],[20014,69.45],[20017,68.94],[20018,68.53],[20019,67.52],[20020,68.18],[20021,67.68],[20024,68.72],[20025,68.27],[20026,68.34],[20027,67.28],[20028,66.84],[20031,66.6],[20032,67.11],[20033,69.4],[20034,69.71],[20035,69.92],[20038,70.87],[20039,69.57],[20040,68.3],[20041,68.91],[20042,68.53],[20045,68.92],[20046,69.4],[20047,69.45],[20048,70.35],[20049,70.93],[20052,71.46],[20053,71.0],[20054,71.2],[20056,71.65],[20059,71.25],[20060,71.08],[20061,71.22],[20062,71.53],[20063,71.52],[20066,70.84],[20067,70.81],[20068,71.65],[20069,70.75],[20070,70.35],[20073,70.48],[20074,69.43],[20075,67.09],[20076,66.97],[20077,67.44],[20080,66.26],[20081,67.08],[20083,67.63],[20084,67.2],[20087,66.59],[20088,66.77],[20090,66.85],[20091,67.48],[20094,67.93],[20095,66.86],[20096,66.92],[20098,65.69],[20101,65.25],[20102,66.12],[20103,67.48],[20104,68.37],[20105,68.7],[20109,70.21],[20110,70.32],[20111,71.55],[20112,71.33],[20115,70.28],[20116,71.08],[20117,70.62],[20118,71.11],[20119,71.31],[20122,70.42],[20123,70.22],[20124,71.11],[20125,70.94],[20126,70.11],[20129,69.99],[20130,69.67],[20131,69.54],[20132,69.94],[20133,70.91],[20137,71.18],[20138,70.39],[20139,70.11],[20140,69.5],[20143,68.69],[20144,68.96],[20145,69.16],[20146,67.86],[20147,68.45],[20150,68.45],[20151,66.86],[20152,67.54],[20153,65.98],[20154,66.78],[20157,64.17],[20158,64.17],[20159,64.78],[20160,63.79],[20161,65.24],[20164,66.28],[20165,65.89],[20166,66.63],[20167,66.47],[20168,65.94],[20171,66.96],[20172,67.36],[20173,66.27],[20174,66.14],[20175,64.82],[20178,64.07],[20179,64.65],[20180,65.56],[20181,61.35],[20182,56.93],[20185,55.44],[20186,54.95],[20187,60.77],[20188,58.34],[20189,59.55],[20192,60.08],[20193,60.95],[20194,59.93],[20195,60.56],[20199,59.25],[20200,60.86],[20201,61.72],[20202,63.44],[20203,63.44],[20206,64.1],[20207,63.91],[20208,63.63],[20209,63.3],[20210,64.64],[20213,64.42],[20214,64.26],[20215,64.16],[20216,64.84],[20217,64.87],[20220,66.74],[20221,67.47],[20222,67.41],[20223,67.18],[20224,67.57],[20227,67.72],[20228,67.31],[20229,65.8],[20230,65.84],[20231,65.65],[20235,67.03],[20236,66.49],[20237,66.74],[20238,66.47],[20241,66.46],[20242,66.44],[20243,66.85],[20244,66.78],[20245,67.64],[20248,67.8],[20249,68.06],[20250,67.88],[20251,68.1],[20252,66.36],[20255,66.83],[20256,65.8],[20257,66.42],[20259,66.19],[20262,65.11],[20263,66.61],[20264,66.63],[20265,68.3],[20266,68.88],[20269,68.85],[20270,68.96],[20271,69.2],[20272,69.66],[20276,68.96],[20277,69.72],[20278,70.11],[20279,71.13],[20280,70.63],[20283,70.62],[20284,69.55],[20285,71.23],[20286,72.09],[20287,71.83],[20290,71.66],[20291,71.71],[20292,72.92],[20293,72.27],[20294,72.22],[20297,71.15],[20298,70.66],[20299,70.26],[20300,69.64],[20301,68.78],[20304,69.35],[20305,69.56],[20306,70.41],[20307,70.43],[20308,71.02],[20311,70.84],[20312,71.65],[20313,72.04],[20314,71.94],[20315,71.68],[20318,71.6],[20319,70.99],[20320,70.47],[20321,70.25],[20322,71.95],[20325,71.12],[20326,71.5],[20327,71.52],[20328,71.64],[20329,71.58],[20333,70.48],[20334,70.0],[20335,70.69],[20336,70.64],[20339,71.03],[20340,70.23],[20341,71.02],[20342,72.53],[20343,71.95],[20346,72.01],[20347,71.56],[20348,71.61],[20349,72.82],[20350,72.14],[20353,71.26],[20354,71.12],[20355,69.19],[20356,68.95],[20357,69.42],[20360,69.68],[20361,69.02],[20362,68.55],[20363,69.1],[20364,69.75],[20367,69.66],[20368,68.85],[20369,68.91],[20370,68.46],[20371,66.67],[20374,67.76],[20375,68.4],[20376,68.54],[20377,67.17],[20378,67.03],[20381,67.58],[20382,67.9],[20383,68.05],[20384,67.77],[20385,68.51],[20388,68.93],[20389,68.26],[20390,67.97],[20391,67.24],[20392,66.84],[20395,66.88],[20396,65.9],[20397,66.24],[20398,65.64],[20399,65.84],[20402,66.35],[20403,66.47],[20404,66.54],[20405,65.11],[20406,65.06],[20409,63.48],[20410,63.3],[20411,63.53],[20412,62.72],[20413,63.86],[20416,64.07],[20417,65.01],[20418,65.46],[20420,66.15],[20423,65.41],[20424,65.27],[20425,66.24],[20426,66.69],[20427,67.17],[20430,66.83],[20431,67.74],[20432,68.62],[20433,68.5],[20434,67.89],[20437,67.76],[20438,67.97],[20439,67.61],[20440,68.02],[20441,68.16],[20444,67.2],[20445,67.2],[20446,67.56],[20448,67.44],[20451,67.57],[20452,67.33],[20453,67.07],[20455,67.7],[20458,68.91],[20459,69.22],[20460,68.45],[20461,68.38],[20462,69.08],[20465,69.31],[20466,68.35],[20467,68.42],[20468,69.96],[20469,70.31],[20473,67.7],[20474,68.75],[20475,69.4],[20476,68.96],[20479,68.48],[20480,68.74],[20481,68.42],[20482,68.48],[20483,67.6],[20486,67.35],[20487,64.21],[20488,64.34],[20489,62.67],[20490,64.17],[20493,64.94],[20494,65.28],[20495,64.29],[20496,63.45],[20497,63.45],[20501,63.73],[20502,64.11],[20503,62.54],[20504,62.45],[20507,60.44],[20508,60.64],[20509,61.52],[20510,61.79],[20511,60.38],[20514,60.17],[20515,59.09],[20516,60.21],[20517,59.49],[20518,58.56],[20521,58.31],[20522,57.9],[20523,56.82],[20524,55.67],[20525,55.86],[20528,56.15],[20529,57.21],[20530,56.81],[20531,56.77],[20532,55.14],[20535,55.76],[20536,55.32],[20537,56.45],[20538,55.32],[20539,54.59],[20542,55.14],[20543,56.52],[20544,56.72],[20545,56.58],[20549,56.8],[20550,56.76],[20551,57.89],[20552,57.52],[20553,57.66],[20556,59.07],[20557,60.5],[20558,62.03],[20559,61.45],[20560,62.74],[20563,62.52],[20564,62.28],[20565,62.66],[20566,60.74],[20567,60.65],[20570,60.26],[20571,59.94],[20572,58.96],[20573,60.92],[20574,61.09],[20577,60.9],[20578,61.81],[20579,62.25],[20580,61.23],[20581,62.13],[20584,61.32],[20585,60.95],[20586,60.45],[20587,60.29],[20588,59.76],[20591,59.72],[20592,58.74],[20593,60.02],[20594,60.81],[20595,60.6],[20599,61.2],[20600,61.03],[20601,60.54],[20602,60.98],[20605,60.69],[20606,60.75],[20607,57.86],[20608,59.19],[20609,57.86],[20612,57.71],[20613,58.57],[20614,57.83],[20615,58.5],[20616,59.09],[20619,59.25],[20620,59.6],[20621,58.67],[20622,58.23],[20626,56.43],[20627,54.93],[20628,54.31],[20629,54.87],[20630,54.74],[20633,55.01],[20634,55.7],[20635,56.26],[20636,57.07],[20640,58.12],[20641,57.48],[20642,56.75],[20643,57.03],[20644,57.66],[20647,57.55],[20648,57.88],[20649,58.95],[20650,58.73],[20651,58.51]]}}};
 
+/* ---------- model state ---------- */
 const T6 = {
   cursor: 0, playing: false, timer: null,
   show: { model: true, opai: true, aiq: true, urth: true, psp: true, gspe: true },
@@ -1413,11 +449,11 @@ const T6 = {
 };
 
 const T6_SERIES_META = [
-  { key: "model", color: "#b08d3e", label: "Factor model NAV (modelled — adjustable)" },
-  { key: "opai",  color: "#16324f", label: "OPAI.PVT — OpenAI private marks (real, Yahoo)" },
-  { key: "aiq",   color: "#7b8794", label: "AIQ — AI ETF (real)" },
+  { key: "model", color: "#b08d3e", label: "Factor model NAV (model — adjustable)" },
+  { key: "opai",  color: "#16324f", label: "OPAI.PVT — OpenAI private marks (real)" },
+  { key: "aiq",   color: "#7b8794", label: "AIQ — AI & tech ETF (real)" },
   { key: "urth",  color: "#aab4be", label: "URTH — MSCI World ETF (real)" },
-  { key: "psp",   color: "#8d99a6", label: "PSP — listed private equity ETF (real)", dash: true },
+  { key: "psp",   color: "#8d99a6", label: "PSP — listed PE ETF (real)", dash: true },
   { key: "gspe",  color: "#4a7ba6", label: "GSPE.L — GS/MSCI PE Return Tracker (real, spliced Jan-26)" }
 ];
 
@@ -1463,7 +499,6 @@ function t6Init(data){
   T6.pspN  = T6.psp.map(function(v){ return 100 * v / T6.psp[0]; });
 
   if(T6.gspe){
-    // splice: rebase GSPE to OPAI's normalised level on GSPE's first day
     const g0day = T6.gspe[0][0], g0px = T6.gspe[0][1];
     let anchor = T6.opaiN[N - 1];
     for(let i = 0; i < N; i++){ if(T6.days[i] >= g0day){ anchor = T6.opaiN[i]; break; } }
@@ -1475,7 +510,6 @@ function t6Init(data){
   document.getElementById("scrub").value = N - 1;
   document.getElementById("snapDate").textContent = data.asOf;
 
-  t6WireControls();
   t6Recompute();
   t6Render();
 }
@@ -1514,7 +548,6 @@ function t6Recompute(){
   }
   T6.model = model;
 
-  // backtest at cadence horizon: model vs OPAI log returns
   const idx = [];
   for(let i = 0; i < N; i += p.cad) idx.push(i);
   if(idx[idx.length - 1] !== N - 1) idx.push(N - 1);
@@ -1531,18 +564,16 @@ function t6Recompute(){
     cov += (rm[i]-mm)*(ro[i]-mo); vm += Math.pow(rm[i]-mm,2); vo += Math.pow(ro[i]-mo,2);
     se += Math.pow(rm[i]-ro[i], 2);
   }
-  const corr = (vm > 0 && vo > 0) ? cov / Math.sqrt(vm * vo) : 0;
-  const te = Math.sqrt(se / n) * Math.sqrt(252 / p.cad);
   T6.metrics = {
-    corr: corr,
-    te: te,
-    modelTot: model[T6.days.length-1] / 100 - 1,
-    opaiTot: T6.opaiN[T6.days.length-1] / 100 - 1,
+    corr: (vm > 0 && vo > 0) ? cov / Math.sqrt(vm * vo) : 0,
+    te: Math.sqrt(se / n) * Math.sqrt(252 / p.cad),
+    modelTot: model[N-1] / 100 - 1,
+    opaiTot: T6.opaiN[N-1] / 100 - 1,
     n: n
   };
 }
 
-/* OLS fit: OPAI cadence log-returns on [1, AIQ, URTH, PSP] cadence log-returns */
+/* OLS: OPAI horizon log-returns on [1, AIQ, URTH, PSP] */
 function t6Fit(){
   const p = t6Params();
   const N = T6.days.length;
@@ -1583,7 +614,6 @@ function t6Fit(){
   }
   const beta = [];
   for(let a = 0; a < k4; a++) beta.push(M[a][k4] / M[a][a]);
-  // R2 and residual vol
   let ssr = 0, sst = 0;
   const ybar = y.reduce(function(a,b){ return a+b; },0) / n;
   for(let i = 0; i < n; i++){
@@ -1610,8 +640,8 @@ function t6ApplyFit(){
   document.getElementById("s_bPSP").value  = clamp(f.bPSP, -1.5, 2.5).toFixed(2);
   document.getElementById("s_idio").value  = Math.round(clamp(f.resid * 100, 0, 60));
   document.getElementById("fitNote").innerHTML =
-    "OLS at " + t6Params().cad + "-day horizon (" + f.n + " obs): R&sup2; = <strong>" + f.r2.toFixed(2) +
-    "</strong>, fitted &alpha; = " + (f.alpha * 100).toFixed(0) + "%/yr. " +
+    "OLS at " + t6Params().cad + "-day horizon (" + f.n + " obs): <strong>R&sup2; = " + f.r2.toFixed(2) +
+    "</strong>, fitted &alpha; = <strong>" + (f.alpha * 100).toFixed(0) + "%/yr</strong>. " +
     (f.r2 < 0.3 ? "Low R&sup2;: most of OPAI&rsquo;s path is idiosyncratic &alpha;, not factor exposure." : "");
   t6Recompute();
   t6Render();
@@ -1620,7 +650,6 @@ function t6ApplyFit(){
 function t6Render(){
   const cur = T6.cursor;
   const N = T6.days.length;
-  const t0 = T6.days[0] * DAY, t1 = T6.days[N-1] * DAY;
   const curDay = T6.days[cur];
 
   function pts(arr){
@@ -1630,28 +659,26 @@ function t6Render(){
   }
 
   const series = [];
-  // OPAI full history faint in the background
-  series.push({ type: "line", data: T6.opaiN.map(function(v,i){ return { t: T6.days[i]*DAY, v: v }; }),
-                color: "#16324f", width: 1.2, opacity: 0.16 });
-  if(T6.show.urth) series.push({ type: "line", data: pts(T6.urthN), color: "#aab4be", width: 1.4 });
-  if(T6.show.psp)  series.push({ type: "line", data: pts(T6.pspN),  color: "#8d99a6", width: 1.4, dash: "4 4" });
-  if(T6.show.aiq)  series.push({ type: "line", data: pts(T6.aiqN),  color: "#7b8794", width: 1.4 });
+  series.push({ data: T6.opaiN.map(function(v,i){ return { t: T6.days[i]*DAY, v: v }; }),
+                color: "#16324f", width: 1.2, opacity: 0.15 });
+  if(T6.show.urth) series.push({ data: pts(T6.urthN), color: "#aab4be", width: 1.4 });
+  if(T6.show.psp)  series.push({ data: pts(T6.pspN),  color: "#8d99a6", width: 1.4, dash: "4 4" });
+  if(T6.show.aiq)  series.push({ data: pts(T6.aiqN),  color: "#7b8794", width: 1.4 });
   if(T6.show.gspe && T6.gspeN){
     const g = T6.gspeN.filter(function(p){ return p.day <= curDay; });
-    if(g.length > 1) series.push({ type: "line", data: g, color: "#4a7ba6", width: 2 });
+    if(g.length > 1) series.push({ data: g, color: "#4a7ba6", width: 2 });
   }
-  if(T6.show.opai) series.push({ type: "line", data: pts(T6.opaiN), color: "#16324f", width: 2.2 });
+  if(T6.show.opai) series.push({ data: pts(T6.opaiN), color: "#16324f", width: 2.2 });
   let modelIdx = -1;
   if(T6.show.model){
-    series.push({ type: "line", data: pts(T6.model), color: "#b08d3e", width: 2.4 });
+    series.push({ data: pts(T6.model), color: "#b08d3e", width: 2.4 });
     modelIdx = series.length - 1;
   }
 
   drawChart(document.getElementById("chartModel"), {
-    height: 400,
-    xMin: t0, xMax: t1,
+    height: 430,
+    xMin: T6.days[0] * DAY, xMax: T6.days[N-1] * DAY,
     series: series,
-    yFmt: function(v){ return v.toFixed(0); },
     hoverSeries: modelIdx >= 0 ? modelIdx : series.length - 1,
     hoverFmt: function(p){
       const day = Math.round(p.t / DAY);
@@ -1663,8 +690,7 @@ function t6Render(){
   });
 
   const dt = new Date(curDay * DAY);
-  document.getElementById("tickDate").textContent =
-    dt.getUTCDate() + " " + fmtDate(curDay * DAY);
+  document.getElementById("tickDate").textContent = dt.getUTCDate() + " " + fmtDate(curDay * DAY);
   document.getElementById("scrub").value = cur;
 
   const m = T6.metrics;
@@ -1680,7 +706,7 @@ function t6RenderToggles(){
   el.innerHTML = T6_SERIES_META.map(function(s){
     return '<label class="toggle-row"><input type="checkbox" data-k="' + s.key + '"' + (T6.show[s.key] ? " checked" : "") + '>' +
       '<span class="tg-swatch" style="border-top-color:' + s.color + (s.dash ? ';border-top-style:dashed' : '') + '"></span>' +
-      '<span class="tg-lbl">' + s.label + '</span></label>';
+      '<span class="tg-lbl">' + esc(s.label) + '</span></label>';
   }).join("");
   el.querySelectorAll("input").forEach(function(cb){
     cb.addEventListener("change", function(){
@@ -1693,7 +719,7 @@ function t6RenderToggles(){
 function t6Stop(){
   T6.playing = false;
   if(T6.timer){ clearInterval(T6.timer); T6.timer = null; }
-  document.getElementById("btnPlay").innerHTML = "&#9654;&nbsp; Play";
+  document.getElementById("btnPlay").innerHTML = "&#9654;&nbsp; Replay history";
 }
 
 function t6WireControls(){
@@ -1740,7 +766,7 @@ function t6WireControls(){
   t6RenderToggles();
 }
 
-/* Attempt a live refresh of the tab-6 tickers; falls back to embedded snapshot. */
+/* Attempt a live refresh; the embedded snapshot is the offline fallback. */
 async function t6TryLiveRefresh(){
   const tks = ["OPAI.PVT","GSPE.L","AIQ","URTH","PSP"];
   try{
@@ -1762,30 +788,11 @@ async function t6TryLiveRefresh(){
     res.forEach(function(kv){ series[kv[0]] = kv[1]; });
     t6Stop();
     t6Init({ asOf: new Date().toISOString().slice(0,10) + " (live)", series: series });
-    document.getElementById("t6DataTag").textContent = "Live data — refreshed from Yahoo Finance";
-  } catch(e){ /* keep embedded snapshot, already labelled */ }
+    document.getElementById("dataBadgeText").textContent = "Live data — refreshed from Yahoo Finance";
+  } catch(e){ /* embedded snapshot already labelled */ }
 }
 
-/* ============================================================
-   Tabs + init
-   ============================================================ */
-document.getElementById("tabbar").querySelectorAll("button").forEach(function(b){
-  b.addEventListener("click", function(){
-    document.querySelectorAll(".tabbar button").forEach(function(x){ x.classList.toggle("active", x === b); });
-    document.querySelectorAll("section.tab").forEach(function(s){
-      s.classList.toggle("visible", s.id === b.getAttribute("data-tab"));
-    });
-    window.scrollTo({ top: 0 });
-  });
-});
-
-renderCompanyButtons();
-renderStepChart();
-renderContrast();
-wireStageButtons();
-renderStages();
-renderFrontier();
-tryLiveFetch();
+t6WireControls();
 t6Init(EMBEDDED_MARKET_DATA);
 t6TryLiveRefresh();
 </script>
