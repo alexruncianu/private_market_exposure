@@ -199,16 +199,15 @@
 
 <header>
   <div class="shell">
-    <div class="kicker">Quantitative Investment Strategies — Interview Follow-up</div>
+    <div class="kicker">Private-Market Replication &middot; Proof of Concept</div>
     <h1>Replicating a Private Return Stream — <span class="name">Alex Runcianu</span></h1>
     <div class="framing">
-      OpenAI&rsquo;s private-market marks (OPAI.PVT), re-expressed as a liquid, daily, factor-based
-      series — the mechanism behind the GS/MSCI World Private Equity Return Tracker (GSPE),
-      demonstrated on a single name with real data.
+      A factor model that rebuilds OpenAI&rsquo;s private-market valuation series (OPAI.PVT) as a
+      daily, tradable basket of liquid ETFs. The same mechanism the GS/MSCI World Private Equity
+      Return Tracker (GSPE) applies at index scale, shown here on a single name with real data.
     </div>
     <div class="status-row">
-      <span class="badge live" id="dataBadge"><span class="dot"></span><span id="dataBadgeText">Real Yahoo Finance data — embedded snapshot</span></span>
-      <span class="badge"><span class="dot"></span>Single file &middot; no libraries &middot; works offline</span>
+      <span class="badge live" id="dataBadge"><span class="dot"></span><span id="dataBadgeText">Yahoo Finance market data, embedded snapshot</span></span>
     </div>
   </div>
 </header>
@@ -217,37 +216,39 @@
 
   <div class="idea-strip">
     <div class="idea">
-      <div class="n">1 &middot; The target</div>
-      <h4>Private marks, not trades</h4>
-      <p>OPAI.PVT prints a row every day but only ~59 distinct prices in 3.5 years. It is a
-      step function of funding rounds and secondary marks — stale, un-tradable, no intraday price.</p>
+      <div class="n">The problem</div>
+      <h4>Private companies have no market price</h4>
+      <p>OPAI.PVT prints a value every day, but only around 59 distinct prices appear in 3.5 years
+      of data. Each change reflects a funding round or secondary transaction. Between those events
+      the series is flat, and there is nothing to trade against.</p>
     </div>
     <div class="idea">
-      <div class="n">2 &middot; The replication</div>
-      <h4>A liquid factor basket</h4>
-      <p>A daily model NAV built from listed ETFs — AI &amp; tech (AIQ), world equity (URTH), listed
-      private equity (PSP) — plus a drift term. Every parameter is adjustable below; liquidity is
-      inherited from the basket.</p>
+      <div class="n">The approach</div>
+      <h4>Rebuild it from liquid instruments</h4>
+      <p>The model constructs a daily NAV from three listed ETFs (AIQ for AI and tech, URTH for
+      world equity, PSP for listed private equity) plus a drift term. Because every input trades
+      daily, so does the result. All parameters can be adjusted below.</p>
     </div>
     <div class="idea">
-      <div class="n">3 &middot; The lesson</div>
-      <h4>Why GSPE tracks the asset class</h4>
-      <p>Backtest one company and idiosyncratic &alpha; dominates — factors explain little.
-      Across thousands of companies the stories diversify away and factors dominate.
-      That is exactly the exposure GSPE replicates.</p>
+      <div class="n">The result</div>
+      <h4>Single names are mostly alpha</h4>
+      <p>For one company, the regression attributes roughly 50% a year to company-specific alpha
+      and comparatively little to the factors. Replication works far better on a diversified
+      universe, where those effects average out. This is why GSPE tracks the asset class rather
+      than individual names.</p>
     </div>
   </div>
 
   <div class="card">
-    <h3>Factor model vs. market — all series normalised to 100
-      <span class="live-tag">Real data — Yahoo Finance</span><span class="model-tag">Gold line is a model</span>
+    <h3>Factor model vs. market, all series normalised to 100
+      <span class="live-tag">Real data: Yahoo Finance</span><span class="model-tag">Gold line is a model</span>
     </h3>
     <div class="model-layout">
       <div>
         <div class="factor-ctrl">
           <div class="fc-head"><label>&alpha; — idiosyncratic drift</label><span class="fc-val" id="v_alpha"></span></div>
           <input type="range" id="s_alpha" min="-20" max="80" step="1" value="30">
-          <div class="fc-sub">Annualised growth not explained by any factor — the company-specific story.</div>
+          <div class="fc-sub">Annualised growth not explained by the factors; the company-specific component.</div>
         </div>
         <div class="factor-ctrl">
           <div class="fc-head"><label>&beta; — AI &amp; tech (AIQ)</label><span class="fc-val" id="v_bAIQ"></span></div>
@@ -272,7 +273,7 @@
         <div class="factor-ctrl">
           <div class="fc-head"><label>Backtest horizon</label><span class="fc-val" id="v_cad"></span></div>
           <input type="range" id="s_cad" min="5" max="63" step="1" value="21">
-          <div class="fc-sub">Model vs. marks compared every N trading days — daily comparison is meaningless against stale marks.</div>
+          <div class="fc-sub">Model and marks are compared every N trading days. Daily comparison is uninformative because the marks are stale.</div>
         </div>
         <div class="ctrl-actions">
           <button id="btnFit">Fit to data (OLS)</button>
@@ -303,10 +304,11 @@
       </div>
     </div>
     <div class="callout" id="keyInsight">
-      <strong>The point in one line:</strong> a liquid basket can carry the <em>systematic</em> part of a
-      private asset — the factor betas — but it cannot manufacture single-name &alpha;. Press
-      <strong>Fit to data</strong>: &alpha; absorbs ~50%/yr of OPAI&rsquo;s return while every beta stays small.
-      Replication is an asset-class tool, which is precisely how GSPE uses it.
+      <strong>Key result:</strong> a liquid basket can replicate the systematic part of a private
+      asset (the factor betas), but not single-name alpha. Pressing <strong>Fit to data</strong>
+      shows this directly: the fitted alpha accounts for around 50%/yr of OPAI&rsquo;s return while
+      the betas stay small. Replication is most effective at asset-class scale, which is how GSPE
+      applies it.
     </div>
   </div>
 
@@ -314,19 +316,19 @@
     <div class="card">
       <h3>How to read this</h3>
       <ul class="tight">
-        <li><strong>Navy step line</strong> — OPAI.PVT, OpenAI&rsquo;s real private marks. Flat for weeks, then a jump: each jump is a funding round or secondary mark, the only genuine observations.</li>
-        <li><strong>Gold line</strong> — the factor model NAV, rebuilt instantly from the sliders. Unlike the marks, it has a price every day and every input is a liquid, tradable instrument.</li>
-        <li><strong>Fit to data</strong> runs a least-squares regression of OPAI&rsquo;s returns on the three factors at the chosen horizon and sets the sliders to the fitted values. At a daily horizon the fit is R&sup2; &asymp; 0.00 — stale marks simply do not respond to daily market moves. Monthly, R&sup2; &asymp; 0.2 and fitted &alpha; &asymp; 50%/yr.</li>
-        <li><strong>Try one experiment:</strong> after fitting, drag &alpha; to zero. The factor-only basket falls far behind the marks — that gap is the idiosyncratic OpenAI story no liquid basket can replicate.</li>
+        <li><strong>Navy step line:</strong> OPAI.PVT, OpenAI&rsquo;s private valuation marks. The line is flat for weeks at a time and moves only when a funding round or secondary transaction resets the valuation. Those events are the only real observations in the series.</li>
+        <li><strong>Gold line:</strong> the factor model NAV, recomputed instantly whenever a slider moves. It has a value every trading day, and each of its inputs is a liquid, tradable instrument.</li>
+        <li><strong>Fit to data</strong> runs a least-squares regression of OPAI&rsquo;s returns on the three factors at the chosen horizon and sets the sliders to the fitted values. At a daily horizon the fit is close to zero, because stale marks do not respond to daily market moves. At a monthly horizon R&sup2; is about 0.2, with fitted alpha near 50%/yr.</li>
+        <li><strong>A useful experiment:</strong> after fitting, drag alpha to zero. The factor-only basket falls well behind the marks. That gap is the company-specific component that no liquid basket can supply.</li>
       </ul>
     </div>
     <div class="card">
       <h3>Data &amp; method</h3>
       <ul class="tight">
-        <li><strong>All price series are real</strong> — Yahoo Finance daily closes for OPAI.PVT (OpenAI, instrument type PRIVATE_COMPANY), AIQ, URTH, PSP and GSPE.L, embedded as a snapshot (as of <span id="snapDate"></span>) so the page works offline. A live refresh is attempted at load.</li>
-        <li><strong>OPAI.PVT is marks, not trades</strong> — Yahoo derives it from funding rounds and secondary activity. Levels are indicative; that staleness is the phenomenon being studied, not a data flaw.</li>
-        <li><strong>GSPE.L</strong> — the GS/MSCI World PE Return Tracker UCITS ETF — listed in Jan 2026, so it is spliced onto the chart at OPAI&rsquo;s normalised level on its first trading day (labelled in the legend).</li>
-        <li><strong>The gold line is a model</strong>, not an observed price. The backtest compares it with OPAI.PVT only at the chosen horizon; correlation and tracking error update live as you move any slider.</li>
+        <li><strong>All price series are real.</strong> Yahoo Finance daily closes for OPAI.PVT (OpenAI, instrument type PRIVATE_COMPANY), AIQ, URTH, PSP and GSPE.L, embedded as a snapshot (as of <span id="snapDate"></span>) so the page works offline. A live refresh is attempted when the page loads.</li>
+        <li><strong>OPAI.PVT is marks, not trades.</strong> Yahoo derives it from funding rounds and secondary activity, so levels are indicative. That staleness is the subject of the analysis rather than a flaw in the data.</li>
+        <li><strong>GSPE.L</strong> (the GS/MSCI World Private Equity Return Tracker UCITS ETF) listed in January 2026. It is spliced onto the chart at OPAI&rsquo;s normalised level on its first trading day, as noted in the legend.</li>
+        <li><strong>The gold line is a model,</strong> not an observed price. The backtest compares it with OPAI.PVT only at the chosen horizon, and the correlation and tracking-error figures update as the sliders move.</li>
       </ul>
       <div class="equation">&Delta;log NAV&nbsp;=&nbsp;&alpha;/252 &nbsp;+&nbsp; &beta;<sub>AIQ</sub>&middot;r<sub>AIQ</sub> &nbsp;+&nbsp; &beta;<sub>WLD</sub>&middot;r<sub>URTH</sub> &nbsp;+&nbsp; &beta;<sub>PE</sub>&middot;r<sub>PSP</sub> &nbsp;+&nbsp; &sigma;&middot;&epsilon;<sub>t</sub></div>
     </div>
@@ -336,9 +338,9 @@
 
 <footer>
   <div class="shell">
-    Prepared by Alex Runcianu as an interview follow-up. Market data from Yahoo Finance; the model
-    series is generated by the equation shown and is labelled as a model throughout. Personal
-    analytical exercise — not investment advice; not affiliated with Goldman Sachs, MSCI or Yahoo.
+    Prepared by Alex Runcianu. Market data from Yahoo Finance; the model series is generated by
+    the equation shown and is labelled as a model throughout. Personal analytical exercise, not
+    investment advice. Not affiliated with Goldman Sachs, MSCI or Yahoo.
   </div>
 </footer>
 
@@ -449,12 +451,12 @@ const T6 = {
 };
 
 const T6_SERIES_META = [
-  { key: "model", color: "#b08d3e", label: "Factor model NAV (model — adjustable)" },
-  { key: "opai",  color: "#16324f", label: "OPAI.PVT — OpenAI private marks (real)" },
-  { key: "aiq",   color: "#7b8794", label: "AIQ — AI & tech ETF (real)" },
-  { key: "urth",  color: "#aab4be", label: "URTH — MSCI World ETF (real)" },
-  { key: "psp",   color: "#8d99a6", label: "PSP — listed PE ETF (real)", dash: true },
-  { key: "gspe",  color: "#4a7ba6", label: "GSPE.L — GS/MSCI PE Return Tracker (real, spliced Jan-26)" }
+  { key: "model", color: "#b08d3e", label: "Factor model NAV (adjustable model)" },
+  { key: "opai",  color: "#16324f", label: "OPAI.PVT, OpenAI private marks (real)" },
+  { key: "aiq",   color: "#7b8794", label: "AIQ, AI & tech ETF (real)" },
+  { key: "urth",  color: "#aab4be", label: "URTH, MSCI World ETF (real)" },
+  { key: "psp",   color: "#8d99a6", label: "PSP, listed PE ETF (real)", dash: true },
+  { key: "gspe",  color: "#4a7ba6", label: "GSPE.L, GS/MSCI PE Return Tracker (real, spliced Jan-26)" }
 ];
 
 function t6Init(data){
@@ -788,7 +790,7 @@ async function t6TryLiveRefresh(){
     res.forEach(function(kv){ series[kv[0]] = kv[1]; });
     t6Stop();
     t6Init({ asOf: new Date().toISOString().slice(0,10) + " (live)", series: series });
-    document.getElementById("dataBadgeText").textContent = "Live data — refreshed from Yahoo Finance";
+    document.getElementById("dataBadgeText").textContent = "Live data refreshed from Yahoo Finance";
   } catch(e){ /* embedded snapshot already labelled */ }
 }
 
